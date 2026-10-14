@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>COUNTDOWN</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Oswald:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --oled-black: #000000;
+      --bone-white: #e5e5e5;
+      --blood-red: #dc2626;
+      --blood-dark: #450a0a;
+      --muted-gray: #525252;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--oled-black);
+      color: var(--bone-white);
+      font-family: 'Share Tech Mono', monospace;
+      overflow: hidden;
+    }
+
+    .gpu-layer {
+      will-change: transform, opacity, filter;
+      transform: translate3d(0, 0, 0);
+      backface-visibility: hidden;
+    }
+
+    .oled-vignette {
+      background: radial-gradient(circle at 50% 50%, transparent 25%, rgba(0, 0, 0, 0.85) 75%, #000000 100%);
+      pointer-events: none;
+    }
+
+    .cursed-vignette {
+      background: radial-gradient(circle at 50% 50%, transparent 25%, rgba(185, 28, 28, 0.32) 75%, rgba(69, 10, 10, 0.8) 100%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .cd-number {
+      font-family: 'Oswald', sans-serif;
+      font-weight: 700;
+      line-height: 0.92;
+      letter-spacing: -0.02em;
+      color: var(--bone-white);
+      transition: color 0.25s ease, text-shadow 0.25s ease;
+      will-change: transform;
+      position: relative;
+    }
+
+    .cd-number.is-blood {
+      color: var(--blood-red);
+      text-shadow: 0 0 28px rgba(220, 38, 38, 0.75), 0 0 6px rgba(255, 50, 50, 0.5);
+    }
+
+    .cd-number.strike-red::after {
+      content: '';
+      position: absolute;
+      left: -8%;
+      right: -8%;
+      top: 50%;
+      height: 4px;
+      background: #dc2626;
+      box-shadow: 0 0 12px #ff0000;
+      transform: rotate(-6deg);
+    }
+
+    .cd-unit {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.28em;
+      color: var(--muted-gray);
+      text-transform: uppercase;
+      margin-left: 0.85rem;
+      min-width: 3.2rem;
+      text-align: left;
+    }
+
+    .cd-unit.is-blood {
+      color: #991b1b;
+    }
+
+    .minimal-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #262626;
+      color: var(--bone-white);
+      font-family: 'Share Tech Mono', monospace;
+      letter-spacing: 0.15em;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+
+    .minimal-input:focus {
+      border-bottom-color: var(--blood-red);
+    }
+
+    .minimal-input::placeholder {
+      color: #404040;
+    }
+
+    .chiaroscuro-entity {
+      filter: contrast(320%) grayscale(100%) brightness(85%);
+      mix-blend-mode: exclusion;
+      will-change: transform, opacity;
+    }
+
+    .invert-strobe {
+      filter: invert(1) contrast(280%) !important;
+    }
+
+    @keyframes fingerprintPulse {
+      0%, 100% {
+        transform: scale3d(1, 1, 1);
+        filter: drop-shadow(0 0 12px rgba(220, 38, 38, 0.5));
+      }
+      50% {
+        transform: scale3d(1.06, 1.06, 1);
+        filter: drop-shadow(0 0 26px rgba(220, 38, 38, 0.95));
+      }
+    }
+
+    .fingerprint-trigger {
+      animation: fingerprintPulse 2.2s ease-in-out infinite;
+    }
+
+    #ghost-message {
+      text-shadow: 0 0 18px rgba(220, 38, 38, 0.95), 0 0 4px rgba(255, 255, 255, 0.45);
+      will-change: opacity, filter, transform;
+    }
+  </style>
+</head>
+
+<body id="app-root" class="relative w-full h-full flex items-center justify-center bg-black select-none overflow-hidden">
+
+  <!-- AMBIENT VIGNETTE & CURSE GLOW -->
+  <div id="ambient-vignette" class="fixed inset-0 z-10 oled-vignette"></div>
+  <div id="cursed-glow" class="fixed inset-0 z-10 cursed-vignette"></div>
+
+  <!-- FLASH OVERLAY -->
+  <div id="flash-layer" class="fixed inset-0 z-40 bg-red-600 mix-blend-screen pointer-events-none opacity-0 gpu-layer"></div>
+
+  <!-- MICRO-JUMPSCARE OVERLAY (FLASHES AT 8S, 5S, 2S) -->
+  <div id="micro-scare-layer" class="fixed inset-0 z-50 pointer-events-none hidden items-center justify-center bg-red-950/30 mix-blend-hard-light gpu-layer">
+    <svg viewBox="0 0 500 300" class="w-[88vw] max-w-[520px] h-auto drop-shadow-[0_0_35px_rgba(255,0,0,1)]">
+      <!-- Piercing Blood Eyes & Glitch Fangs -->
+      <ellipse cx="145" cy="130" rx="58" ry="34" fill="#000000" />
+      <ellipse cx="355" cy="130" rx="58" ry="34" fill="#000000" />
+      <circle cx="145" cy="130" r="22" fill="#dc2626" />
+      <circle cx="355" cy="130" r="22" fill="#dc2626" />
+      <circle cx="145" cy="130" r="6" fill="#ffffff" />
+      <circle cx="355" cy="130" r="6" fill="#ffffff" />
+      <path d="M120 230 Q250 290 380 230" stroke="#dc2626" stroke-width="6" fill="none" />
+      <path d="M150 220 L160 265 M195 225 L200 275 M250 228 L250 280 M305 225 L300 275 M350 220 L340 265" stroke="#ffffff" stroke-width="4" />
+    </svg>
+  </div>
+
+  <!-- FAKE 404 NOT FOUND / 502 SERVER ERROR OVERLAY (3 SECONDS) -->
+  <div id="fake-404-screen" class="fixed inset-0 z-[60] bg-[#f8f9fa] text-[#212529] font-sans hidden flex-col items-center justify-start pt-16 sm:pt-24 px-6 select-text">
+    <div class="w-full max-w-2xl text-left">
+      <h1 class="text-3xl sm:text-4xl font-normal text-black mb-3 tracking-tight" style="font-family: Georgia, serif;">
+        404 Not Found
+      </h1>
+      <p class="text-sm sm:text-base text-neutral-800 mb-4 leading-relaxed" style="font-family: system-ui, -apple-system, sans-serif;">
+        The requested URL <code id="error-url-path" class="bg-neutral-200 px-1.5 py-0.5 rounded text-red-800 font-mono text-xs sm:text-sm">/death-protocol/user</code> was not found on this server.
+      </p>
+      <p class="text-xs sm:text-sm text-neutral-600 mb-6 font-mono">
+        ERR_CONNECTION_RESET_BY_PEER :: 502 Bad Gateway
+      </p>
+      <hr class="border-neutral-300 my-4" />
+      <p class="text-xs text-neutral-500 italic" style="font-family: Georgia, serif;">
+        nginx/1.18.0 (Ubuntu) Server at countdown-protocol.internal Port 443
+      </p>
+    </div>
+  </div>
+
+  <!-- MINIMAL AUDIO SPEAKER ICON (TOP RIGHT ONLY) -->
+  <button id="audio-btn" type="button" onclick="toggleAudio()" aria-label="Audio Toggle"
+          class="fixed top-5 right-5 z-50 p-2 text-neutral-400 opacity-25 hover:opacity-80 transition-opacity duration-300 focus:outline-none">
+    <i id="audio-icon" data-lucide="volume-x" class="w-5 h-5"></i>
+  </button>
+
+  <!-- =========================================================================
+       SCREEN 1: INTRO PORTAL ("COUNTING DEAD")
+       ========================================================================= -->
+  <section id="screen-1" class="relative z-20 w-full max-w-md px-6 flex flex-col items-center justify-center text-center gpu-layer">
+    <h1 class="font-['Oswald'] text-4xl sm:text-5xl font-bold tracking-[0.28em] text-neutral-200 uppercase mb-2">
+      COUNTING DEAD
+    </h1>
+    <p class="text-[11px] tracking-[0.22em] text-neutral-600 uppercase mb-16">
+      MỌI SINH MỆNH ĐỀU CÓ GIỜ TỬ
+    </p>
+
+    <button type="button" onclick="enterScreen2()" class="group flex flex-col items-center focus:outline-none">
+      <div class="w-20 h-20 rounded-full border border-red-900/60 flex items-center justify-center bg-red-950/10 group-hover:border-red-600 transition-colors duration-300 fingerprint-trigger">
+        <svg viewBox="0 0 64 64" class="w-11 h-11 text-red-600">
+          <path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                d="M32 10 C19 10 12 19 12 32 C12 44 17 52 23 56 M32 10 C45 10 52 19 52 32 C52 41 48 49 43 54 M32 17 C23 17 18 23 18 32 C18 41 22 48 28 52 M32 17 C41 17 46 23 46 32 C46 38 43 44 38 49 M32 24 C27 24 24 27 24 32 C24 38 27 43 32 47 M32 24 C37 24 40 27 40 32 C40 36 37 40 34 43 M32 30 L32 40" />
+        </svg>
+      </div>
+      <span class="mt-6 text-xs tracking-[0.3em] text-red-600 group-hover:text-red-500 uppercase transition-colors">
+        CHẤP NHẬN ĐIỀU KHOẢN
+      </span>
+    </button>
+  </section>
+
+  <!-- =========================================================================
+       SCREEN 2: MINIMAL SACRIFICE INPUT
+       ========================================================================= -->
+  <section id="screen-2" class="hidden relative z-20 w-full max-w-xs px-6 flex-col items-center justify-center text-center gpu-layer opacity-0">
+    <p class="text-[11px] tracking-[0.28em] text-neutral-500 uppercase mb-12">
+      ĐỊNH DANH DƯƠNG GIAN
+    </p>
+
+    <div class="w-full space-y-10">
+      <div>
+        <input id="inp-name" type="text" autocomplete="off" spellcheck="false"
+               placeholder="TÊN CỦA BẠN"
+               oninput="audioEngine.playKeyClick()"
+               class="minimal-input w-full py-2.5 text-base sm:text-lg uppercase" />
+      </div>
+
+      <div>
+        <input id="inp-dob" type="text" autocomplete="off" inputmode="numeric"
+               placeholder="NGÀY THÁNG NĂM SINH (VD: 13/10/2002)"
+               oninput="formatDobInput(this)"
+               class="minimal-input w-full py-2.5 text-sm sm:text-base uppercase" />
+      </div>
+    </div>
+
+    <button type="button" onclick="enterScreen3()"
+            class="mt-14 px-8 py-3 border border-red-900/70 hover:border-red-600 bg-red-950/15 hover:bg-red-950/30 text-xs tracking-[0.32em] text-red-500 uppercase transition-all duration-300 focus:outline-none">
+      XÁC NHẬN SỐ MỆNH
+    </button>
+  </section>
+
+  <!-- =========================================================================
+       SCREEN 3: COUNTDOWN TIMER + AUTO 4S TRAP -> 10S CURSE
+       ========================================================================= -->
+  <section id="screen-3" onclick="triggerTenSecondTrap()" class="hidden relative z-20 w-full h-full flex-col items-center justify-center gpu-layer opacity-0 cursor-pointer">
+
+    <!-- Psychological Dynamic Name Ghost Fade Text Overlay -->
+    <div class="fixed top-10 sm:top-14 inset-x-0 z-30 flex justify-center px-6 pointer-events-none">
+      <p id="ghost-message" class="opacity-0 text-sm sm:text-lg md:text-xl font-bold tracking-[0.15em] text-red-500 text-center"></p>
+    </div>
+
+    <!-- Vertical Stack -->
+    <div id="clock-stack" class="flex flex-col items-center justify-center space-y-2.5 sm:space-y-3.5 gpu-layer">
+
+      <!-- YRS -->
+      <div id="row-yrs" class="flex items-baseline justify-center gpu-layer">
+        <span id="val-yrs" class="cd-number text-5xl sm:text-7xl md:text-8xl">42</span>
+        <span id="unit-yrs" class="cd-unit">YRS</span>
+      </div>
+
+      <!-- DAYS -->
+      <div id="row-days" class="flex items-baseline justify-center gpu-layer">
+        <span id="val-days" class="cd-number text-5xl sm:text-7xl md:text-8xl">184</span>
+        <span id="unit-days" class="cd-unit">DAYS</span>
+      </div>
+
+      <!-- HRS -->
+      <div id="row-hrs" class="flex items-baseline justify-center gpu-layer">
+        <span id="val-hrs" class="cd-number text-5xl sm:text-7xl md:text-8xl">09</span>
+        <span id="unit-hrs" class="cd-unit">HRS</span>
+      </div>
+
+      <!-- MIN -->
+      <div id="row-min" class="flex items-baseline justify-center gpu-layer">
+        <span id="val-min" class="cd-number text-5xl sm:text-7xl md:text-8xl">37</span>
+        <span id="unit-min" class="cd-unit">MIN</span>
+      </div>
+
+      <!-- SEC + .ms -->
+      <div id="row-sec" class="flex items-baseline justify-center gpu-layer relative">
+        <span id="val-sec" class="cd-number is-blood text-6xl sm:text-7xl md:text-8xl">59</span>
+        <div class="flex flex-col items-start ml-3">
+          <span id="val-ms" class="font-mono text-xs sm:text-sm text-red-600/90 font-bold tracking-wider">.99</span>
+          <span id="unit-sec" class="cd-unit is-blood !ml-0">SEC</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Vital Signs Bar (BPM & Remaining Breaths) -->
+    <div id="vitals-bar" class="mt-8 flex items-center justify-center space-x-8 text-[11px] tracking-[0.22em] text-neutral-500 uppercase">
+      <div class="flex items-center space-x-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+        <span>BPM: <strong id="val-bpm" class="text-neutral-300">72</strong></span>
+      </div>
+      <div>
+        <span>HƠI THỞ: <strong id="val-breaths" class="text-neutral-300">354,192,040</strong></span>
+      </div>
+    </div>
+
+    <!-- Bottom Warning -->
+    <p id="bottom-whisper" class="fixed bottom-7 text-[10px] tracking-[0.3em] text-neutral-600 uppercase transition-colors duration-300">
+      ĐANG ĐỒNG BỘ SINH MỆNH...
+    </p>
+  </section>
+
+  <!-- =========================================================================
+       FULLSCREEN JUMPSCARE LAYER (BURSTS OUT FROM 404 SCREEN)
+       ========================================================================= -->
+  <div id="jumpscare-stage" class="fixed inset-0 z-[70] bg-black hidden items-center justify-center overflow-hidden pointer-events-none gpu-layer">
+    <div id="nightmare-entity" class="relative w-full h-full flex items-center justify-center gpu-layer">
+      <img id="nightmare-photo"
+           src="https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=1200&auto=format&fit=crop"
+           alt=""
+           class="absolute inset-0 w-full h-full object-cover opacity-60 chiaroscuro-entity" />
+
+      <!-- High-Contrast Demon Face SVG (Red Blood Eyes & Unhinged Jaw) -->
+      <svg viewBox="0 0 600 750" class="relative z-10 w-[94vw] max-w-[620px] h-auto object-contain gpu-layer">
+        <defs>
+          <radialGradient id="skullGlow" cx="50%" cy="42%" r="50%">
+            <stop offset="0%" stop-color="#f5f5f5" />
+            <stop offset="48%" stop-color="#737373" />
+            <stop offset="80%" stop-color="#171717" />
+            <stop offset="100%" stop-color="#000000" />
+          </radialGradient>
+          <radialGradient id="bloodEye" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="28%" stop-color="#ff0000" />
+            <stop offset="70%" stop-color="#7f1d1d" />
+            <stop offset="100%" stop-color="#000000" />
+          </radialGradient>
+        </defs>
+
+        <path fill="url(#skullGlow)" d="M300 40 C160 40 95 150 105 290 C112 380 145 445 165 530 C185 625 225 720 300 720 C375 720 415 625 435 530 C455 445 488 380 495 290 C505 150 440 40 300 40 Z" />
+
+        <ellipse cx="155" cy="390" rx="58" ry="125" transform="rotate(14 155 390)" fill="#000000" />
+        <ellipse cx="445" cy="390" rx="58" ry="125" transform="rotate(-14 445 390)" fill="#000000" />
+
+        <ellipse cx="215" cy="275" rx="64" ry="50" transform="rotate(-8 215 275)" fill="#000000" />
+        <ellipse cx="385" cy="275" rx="64" ry="50" transform="rotate(8 385 275)" fill="#000000" />
+
+        <circle cx="220" cy="275" r="22" fill="url(#bloodEye)" />
+        <circle cx="380" cy="275" r="22" fill="url(#bloodEye)" />
+        <circle cx="220" cy="275" r="5" fill="#ffffff" />
+        <circle cx="380" cy="275" r="5" fill="#ffffff" />
+
+        <polygon points="300,295 272,380 328,380" fill="#000000" />
+
+        <ellipse cx="300" cy="545" rx="105" ry="148" fill="#000000" />
+        <ellipse cx="300" cy="555" rx="78" ry="118" fill="#290404" />
+
+        <g stroke="#e5e5e5" stroke-width="4.5" stroke-linecap="round">
+          <line x1="225" y1="435" x2="232" y2="495" />
+          <line x1="250" y1="422" x2="254" y2="505" />
+          <line x1="275" y1="415" x2="277" y2="512" />
+          <line x1="300" y1="412" x2="300" y2="515" />
+          <line x1="325" y1="415" x2="323" y2="512" />
+          <line x1="350" y1="422" x2="346" y2="505" />
+          <line x1="375" y1="435" x2="368" y2="495" />
+
+          <line x1="230" y1="650" x2="238" y2="585" />
+          <line x1="255" y1="665" x2="260" y2="578" />
+          <line x1="280" y1="672" x2="282" y2="572" />
+          <line x1="300" y1="675" x2="300" y2="570" />
+          <line x1="320" y1="672" x2="318" y2="572" />
+          <line x1="345" y1="665" x2="340" y2="578" />
+          <line x1="370" y1="650" x2="362" y2="585" />
+        </g>
+
+        <path d="M220 325 L212 455 M380 325 L388 455 M300 60 L292 195 L312 245" stroke="#dc2626" stroke-width="5" fill="none" opacity="0.85" />
+      </svg>
+
+      <!-- Blood Farewell Message Overlay -->
+      <div class="fixed inset-x-0 bottom-14 z-30 flex justify-center px-4">
+        <h2 id="farewell-text" class="font-['Oswald'] text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-[0.2em] text-red-600 uppercase text-center drop-shadow-[0_0_25px_rgba(255,0,0,1)]">
+          TẠM BIỆT BẠN!
+        </h2>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TARGET_REDIRECT_URL = "https://www.24h.com.vn/bong-da/ronaldo-tuyen-bo-ngao-nghe-toi-vi-dai-nhat-lich-su-bong-da-khong-can-ban-cai-c48a1802164.html";
+
+    // =========================================================================
+    // 1. WEB AUDIO API ENGINE (MUSIC BOX, 180BPM HEARTBEAT, MICRO-GLITCH, SCREECH)
+    // =========================================================================
+    class HorrorAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.isMuted = true;
+        this.isRunning = false;
+        this.isCurseActive = false;
+        this.lullabyTimer = null;
+        this.heartbeatTimer = null;
+        this.droneOsc = null;
+        this.noteIdx = 0;
+        this.lullabyNotes = [622.25, 659.25, 523.25, 493.88, 440.00, 349.23, 329.63, 246.94];
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.gain.setValueAtTime(1, this.ctx.currentTime);
+          this.masterGain.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      unlockAndStart() {
+        this.ensureContext();
+        this.isMuted = false;
+        syncAudioIcon(true);
+
+        if (this.isRunning) return;
+        this.isRunning = true;
+
+        this.startSubDrone();
+        this.startLullabyLoop();
+        this.startHeartbeatLoop('normal');
+      }
+
+      toggleMute() {
+        if (!this.isRunning) {
+          this.unlockAndStart();
+          return;
+        }
+        this.isMuted = !this.isMuted;
+        if (this.ctx) {
+          if (this.isMuted) {
+            this.ctx.suspend();
+          } else {
+            this.ctx.resume();
+          }
+        }
+        syncAudioIcon(!this.isMuted);
+      }
+
+      playMusicBoxTone(freq) {
+        if (this.isMuted || !this.ctx || !this.masterGain) return;
+        const now = this.ctx.currentTime;
+
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+
+        const detune = this.isCurseActive ? 35 : 9;
+        osc1.frequency.setValueAtTime(freq, now);
+        osc2.frequency.setValueAtTime(freq, now);
+        osc1.detune.setValueAtTime(detune, now);
+        osc2.detune.setValueAtTime(-detune, now);
+
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.045, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + (this.isCurseActive ? 0.42 : 1.5));
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 1.55);
+        osc2.stop(now + 1.55);
+      }
+
+      startLullabyLoop() {
+        if (this.lullabyTimer) clearInterval(this.lullabyTimer);
+        const stepMs = this.isCurseActive ? 260 : 920;
+        this.lullabyTimer = setInterval(() => {
+          if (this.isMuted) return;
+          const freq = this.lullabyNotes[this.noteIdx % this.lullabyNotes.length];
+          this.noteIdx++;
+          this.playMusicBoxTone(this.isCurseActive ? freq * 1.09 : freq);
+        }, stepMs);
+      }
+
+      playHeartbeatPulse(bpmMode) {
+        if (this.isMuted || !this.ctx || !this.masterGain) return;
+        const now = this.ctx.currentTime;
+        const peak = bpmMode === 'panic' ? 0.5 : 0.16;
+
+        const thump = (t, amp) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(58, t);
+          osc.frequency.exponentialRampToValueAtTime(26, t + 0.12);
+
+          gain.gain.setValueAtTime(0.001, t);
+          gain.gain.linearRampToValueAtTime(amp, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.start(t);
+          osc.stop(t + 0.15);
+        };
+
+        thump(now, peak);
+        thump(now + (bpmMode === 'panic' ? 0.11 : 0.19), peak * 0.75);
+      }
+
+      startHeartbeatLoop(mode = 'normal') {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        const interval = mode === 'panic' ? 333 : 1000;
+        this.heartbeatTimer = setInterval(() => {
+          this.playHeartbeatPulse(mode);
+        }, interval);
+      }
+
+      startSubDrone() {
+        if (!this.ctx || !this.masterGain) return;
+        const now = this.ctx.currentTime;
+        this.droneOsc = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+
+        this.droneOsc.type = 'sawtooth';
+        this.droneOsc.frequency.setValueAtTime(36, now);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(85, now);
+        gain.gain.setValueAtTime(0.035, now);
+
+        this.droneOsc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        this.droneOsc.start(now);
+      }
+
+      playKeyClick() {
+        if (this.isMuted || !this.ctx || !this.masterGain) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.025);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.032);
+      }
+
+      // Short electric glitch burst for Micro-Jumpscares (0.18s)
+      playMicroGlitchBurst() {
+        if (this.isMuted || !this.ctx || !this.masterGain) return;
+        const now = this.ctx.currentTime;
+        const dur = 0.18;
+
+        // Sharp FM spike
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(1420, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + dur);
+        gain.gain.setValueAtTime(0.42, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + dur);
+
+        // Static noise burst
+        const bufLen = Math.floor(this.ctx.sampleRate * dur);
+        const buf = this.ctx.createBuffer(1, bufLen, this.ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) {
+          data[i] = (Math.random() * 2 - 1) * 0.8;
+        }
+        const noise = this.ctx.createBufferSource();
+        const nGain = this.ctx.createGain();
+        noise.buffer = buf;
+        nGain.gain.setValueAtTime(0.35, now);
+        nGain.gain.exponentialRampToValueAtTime(0.01, now + dur);
+        noise.connect(nGain);
+        nGain.connect(this.masterGain);
+        noise.start(now);
+      }
+
+      // 100% Absolute Silence for the 3-second Fake 404 screen
+      cutAllSoundImmediately() {
+        if (this.lullabyTimer) {
+          clearInterval(this.lullabyTimer);
+          this.lullabyTimer = null;
+        }
+        if (this.heartbeatTimer) {
+          clearInterval(this.heartbeatTimer);
+          this.heartbeatTimer = null;
+        }
+        if (this.droneOsc) {
+          try { this.droneOsc.stop(); } catch (e) {}
+          this.droneOsc = null;
+        }
+        if (this.ctx && this.masterGain) {
+          this.masterGain.gain.cancelScheduledValues(this.ctx.currentTime);
+          this.masterGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        }
+      }
+
+      // Massive Jumpscare Audio Burst (FM Screech + Glass Shatter + Roar + 1050Hz Flatline)
+      playFinalJumpscareBurst(duration = 1.6) {
+        this.ensureContext();
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+
+        const now = this.ctx.currentTime;
+        const burstMaster = this.ctx.createGain();
+        burstMaster.gain.setValueAtTime(0.9, now);
+        burstMaster.connect(this.ctx.destination);
+
+        // 1. Ear-Piercing FM Screech
+        const carrier = this.ctx.createOscillator();
+        const mod = this.ctx.createOscillator();
+        const modGain = this.ctx.createGain();
+        const screechGain = this.ctx.createGain();
+
+        carrier.type = 'sawtooth';
+        mod.type = 'square';
+        carrier.frequency.setValueAtTime(1950, now);
+        carrier.frequency.exponentialRampToValueAtTime(320, now + duration);
+        mod.frequency.setValueAtTime(125, now);
+        mod.frequency.linearRampToValueAtTime(920, now + duration);
+        modGain.gain.setValueAtTime(1500, now);
+
+        screechGain.gain.setValueAtTime(0.6, now);
+        screechGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+        mod.connect(modGain);
+        modGain.connect(carrier.frequency);
+        carrier.connect(screechGain);
+        screechGain.connect(burstMaster);
+
+        carrier.start(now);
+        mod.start(now);
+        carrier.stop(now + duration);
+        mod.stop(now + duration);
+
+        // 2. High-Frequency Glass Shatter Chimes
+        [2450, 3120, 3890, 4420].forEach((freq, idx) => {
+          const glassOsc = this.ctx.createOscillator();
+          const glassGain = this.ctx.createGain();
+          glassOsc.type = 'square';
+          glassOsc.frequency.setValueAtTime(freq, now + idx * 0.02);
+          glassOsc.frequency.exponentialRampToValueAtTime(freq * 0.4, now + 0.35);
+          glassGain.gain.setValueAtTime(0.25, now + idx * 0.02);
+          glassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          glassOsc.connect(glassGain);
+          glassGain.connect(burstMaster);
+          glassOsc.start(now + idx * 0.02);
+          glassOsc.stop(now + 0.36);
+        });
+
+        // 3. Distorted Sub-Bass Monster Roar + White Noise
+        const roarOsc = this.ctx.createOscillator();
+        const roarGain = this.ctx.createGain();
+        roarOsc.type = 'sawtooth';
+        roarOsc.frequency.setValueAtTime(72, now);
+        roarOsc.frequency.linearRampToValueAtTime(28, now + duration);
+        roarGain.gain.setValueAtTime(0.65, now);
+        roarGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+        roarOsc.connect(roarGain);
+        roarGain.connect(burstMaster);
+        roarOsc.start(now);
+        roarOsc.stop(now + duration);
+
+        const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        const whiteNoise = this.ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.5, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+        whiteNoise.connect(noiseGain);
+        noiseGain.connect(burstMaster);
+        whiteNoise.start(now);
+
+        // 4. High-Pitched Hospital Flatline (1050Hz)
+        const flatOsc = this.ctx.createOscillator();
+        const flatGain = this.ctx.createGain();
+        flatOsc.type = 'sine';
+        flatOsc.frequency.setValueAtTime(1050, now);
+        flatGain.gain.setValueAtTime(0.38, now);
+        flatOsc.connect(flatGain);
+        flatGain.connect(burstMaster);
+        flatOsc.start(now);
+        flatOsc.stop(now + duration);
+      }
+    }
+
+    const audioEngine = new HorrorAudioEngine();
+
+    function syncAudioIcon(isOn) {
+      const icon = document.getElementById('audio-icon');
+      icon.setAttribute('data-lucide', isOn ? 'volume-2' : 'volume-x');
+      lucide.createIcons();
+    }
+
+    function toggleAudio() {
+      audioEngine.toggleMute();
+    }
+
+    // =========================================================================
+    // 2. 60FPS CINEMATIC SCREEN TRANSITIONS
+    // =========================================================================
+    function transitionScreens(fromId, toId, onReadyCallback) {
+      const fromEl = document.getElementById(fromId);
+      const toEl = document.getElementById(toId);
+      const flashEl = document.getElementById('flash-layer');
+
+      const tl = gsap.timeline();
+      tl.to(fromEl, {
+        filter: 'blur(12px)',
+        opacity: 0,
+        scale: 1.08,
+        duration: 0.45,
+        ease: 'power2.in'
+      }, 0);
+
+      tl.fromTo(flashEl, { opacity: 0.25 }, { opacity: 0, duration: 0.12, ease: 'power1.out' }, 0.42);
+
+      tl.add(() => {
+        fromEl.classList.add('hidden');
+        fromEl.classList.remove('flex');
+        gsap.set(fromEl, { filter: 'blur(0px)', scale: 1 });
+
+        toEl.classList.remove('hidden');
+        toEl.classList.add('flex');
+        if (onReadyCallback) onReadyCallback();
+      }, 0.45);
+
+      tl.fromTo(toEl,
+        { opacity: 0, scale: 0.96, filter: 'blur(10px)' },
+        { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.5, ease: 'power2.out' },
+        0.47
+      );
+    }
+
+    function formatDobInput(input) {
+      audioEngine.playKeyClick();
+      let v = input.value.replace(/\D/g, '').slice(0, 8);
+      if (v.length >= 5) {
+        input.value = `${v.slice(0, 2)}/${v.slice(2, 4)}/${v.slice(4)}`;
+      } else if (v.length >= 3) {
+        input.value = `${v.slice(0, 2)}/${v.slice(2)}`;
+      } else {
+        input.value = v;
+      }
+    }
+
+    function enterScreen2() {
+      audioEngine.unlockAndStart();
+      audioEngine.playKeyClick();
+      transitionScreens('screen-1', 'screen-2', () => {
+        setTimeout(() => document.getElementById('inp-name').focus(), 100);
+      });
+    }
+
+    function enterScreen3() {
+      audioEngine.unlockAndStart();
+      audioEngine.playKeyClick();
+      transitionScreens('screen-2', 'screen-3', () => {
+        initDeterministicCountdown();
+      });
+    }
+
+    // =========================================================================
+    // 3. DETERMINISTIC DEATH CLOCK & 4-SECOND AUTO-TRAP TRIGGER
+    // =========================================================================
+    let targetTimestamp = 0;
+    let rafId = null;
+    let isCurseTriggered = false;
+    let autoTrapTimeout = null;
+    let activeGhostStage = 0;
+    let microScareFlags = { s8: false, s5: false, s2: false };
+    let formattedUserName = 'Bạn';
+
+    function formatDisplayName(rawInput) {
+      const cleaned = (rawInput || '').trim();
+      if (!cleaned) return 'Bạn';
+      return cleaned
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+    }
+
+    function initDeterministicCountdown() {
+      const rawNameInput = document.getElementById('inp-name').value;
+      formattedUserName = formatDisplayName(rawNameInput);
+
+      const rawNameHash = (rawNameInput || 'UNKNOWN').trim().toUpperCase();
+      const rawDob = (document.getElementById('inp-dob').value || '13/10/2002').trim();
+
+      // Update 404 URL slug and final farewell text with user's name
+      const urlSlug = formattedUserName
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '-')
+        .toLowerCase() || 'user';
+      document.getElementById('error-url-path').textContent = `/death-protocol/${urlSlug}`;
+      document.getElementById('farewell-text').textContent = `TẠM BIỆT ${formattedUserName.toUpperCase()}!`;
+
+      let hash = 2166136261;
+      const seedStr = `${rawNameHash}::${rawDob}`;
+      for (let i = 0; i < seedStr.length; i++) {
+        hash ^= seedStr.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      hash = Math.abs(hash);
+
+      const years = 26 + (hash % 39);
+      const days = hash % 365;
+      const hrs = (hash >> 3) % 24;
+      const mins = (hash >> 6) % 60;
+      const secs = (hash >> 9) % 60;
+
+      const msOffset =
+        years * 365.2425 * 86400000 +
+        days * 86400000 +
+        hrs * 3600000 +
+        mins * 60000 +
+        secs * 1000;
+
+      targetTimestamp = performance.now() + msOffset;
+      isCurseTriggered = false;
+      activeGhostStage = 0;
+      microScareFlags = { s8: false, s5: false, s2: false };
+
+      if (rafId) cancelAnimationFrame(rafId);
+      tickLoop();
+
+      // Auto-trigger the 10-second trap after 4.0 seconds of normal ticking
+      if (autoTrapTimeout) clearTimeout(autoTrapTimeout);
+      autoTrapTimeout = setTimeout(() => {
+        if (!isCurseTriggered) {
+          triggerTenSecondTrap();
+        }
+      }, 4000);
+    }
+
+    function tickLoop() {
+      const now = performance.now();
+      const rem = Math.max(0, targetTimestamp - now);
+
+      const msPerYear = 365.2425 * 86400000;
+      const yrs = Math.floor(rem / msPerYear);
+      const remAfterYrs = rem % msPerYear;
+
+      const days = Math.floor(remAfterYrs / 86400000);
+      const remAfterDays = remAfterYrs % 86400000;
+
+      const hrs = Math.floor(remAfterDays / 3600000);
+      const remAfterHrs = remAfterDays % 3600000;
+
+      const mins = Math.floor(remAfterHrs / 60000);
+      const remAfterMins = remAfterHrs % 60000;
+
+      const secs = Math.floor(remAfterMins / 1000);
+      const cs = Math.floor((remAfterMins % 1000) / 10);
+
+      document.getElementById('val-yrs').textContent = String(yrs).padStart(2, '0');
+      document.getElementById('val-days').textContent = isCurseTriggered
+        ? '00'
+        : String(days).padStart(3, '0');
+      document.getElementById('val-hrs').textContent = String(hrs).padStart(2, '0');
+      document.getElementById('val-min').textContent = String(mins).padStart(2, '0');
+      document.getElementById('val-sec').textContent = String(secs).padStart(2, '0');
+      document.getElementById('val-ms').textContent = '.' + String(cs).padStart(2, '0');
+
+      const totalSecsLeft = rem / 1000;
+      const breathsLeft = Math.max(0, Math.floor(totalSecsLeft * 0.2667));
+      document.getElementById('val-breaths').textContent = breathsLeft.toLocaleString('en-US');
+
+      if (isCurseTriggered) {
+        handleTenSecondPsychologicalSequence(totalSecsLeft);
+
+        if (rem <= 0) {
+          executeThreeSecondFake404Screen();
+          return;
+        }
+      }
+
+      rafId = requestAnimationFrame(tickLoop);
+    }
+
+    // =========================================================================
+    // 4. 10-SECOND CURSE TRAP + DYNAMIC NAME MESSAGES + 3 MICRO-JUMPSCARES
+    // =========================================================================
+    function triggerTenSecondTrap() {
+      if (isCurseTriggered) return;
+      isCurseTriggered = true;
+
+      if (autoTrapTimeout) {
+        clearTimeout(autoTrapTimeout);
+        autoTrapTimeout = null;
+      }
+      if (rafId) cancelAnimationFrame(rafId);
+
+      audioEngine.unlockAndStart();
+      audioEngine.isCurseActive = true;
+      audioEngine.playMicroGlitchBurst();
+      audioEngine.startLullabyLoop();
+      audioEngine.startHeartbeatLoop('panic');
+
+      const flash = document.getElementById('flash-layer');
+      gsap.fromTo(flash, { opacity: 0.75 }, { opacity: 0, duration: 0.3 });
+
+      document.getElementById('cursed-glow').style.opacity = '1';
+      document.getElementById('val-bpm').textContent = '180';
+      document.getElementById('val-bpm').classList.replace('text-neutral-300', 'text-red-500');
+
+      const whisper = document.getElementById('bottom-whisper');
+      whisper.textContent = 'KHẾ ƯỚC ĐÃ BỊ PHÁ VỠ';
+      whisper.classList.replace('text-neutral-600', 'text-red-600');
+
+      // Strike through YRS, DAYS, HRS, MIN in blood red and drain to 00 in 0.6s
+      ['yrs', 'days', 'hrs', 'min'].forEach(k => {
+        const el = document.getElementById(`val-${k}`);
+        el.classList.add('is-blood', 'strike-red');
+        document.getElementById(`unit-${k}`).classList.add('is-blood');
+      });
+      document.getElementById('val-sec').classList.add('is-blood');
+      document.getElementById('unit-sec').classList.add('is-blood');
+
+      const drainObj = {
+        y: parseInt(document.getElementById('val-yrs').textContent, 10) || 40,
+        d: parseInt(document.getElementById('val-days').textContent, 10) || 180,
+        h: parseInt(document.getElementById('val-hrs').textContent, 10) || 9,
+        m: parseInt(document.getElementById('val-min').textContent, 10) || 37
+      };
+
+      gsap.to(drainObj, {
+        y: 0,
+        d: 0,
+        h: 0,
+        m: 0,
+        duration: 0.6,
+        ease: 'power3.inOut',
+        onUpdate: () => {
+          document.getElementById('val-yrs').textContent = String(Math.floor(drainObj.y)).padStart(2, '0');
+          document.getElementById('val-days').textContent = String(Math.floor(drainObj.d)).padStart(2, '0');
+          document.getElementById('val-hrs').textContent = String(Math.floor(drainObj.h)).padStart(2, '0');
+          document.getElementById('val-min').textContent = String(Math.floor(drainObj.m)).padStart(2, '0');
+          document.getElementById('val-sec').textContent = '10';
+          document.getElementById('val-ms').textContent = '.00';
+        },
+        onComplete: () => {
+          targetTimestamp = performance.now() + 10000;
+          activeGhostStage = 0;
+          rafId = requestAnimationFrame(tickLoop);
+        }
+      });
+    }
+
+    function triggerMicroJumpscare() {
+      const microLayer = document.getElementById('micro-scare-layer');
+      const flashLayer = document.getElementById('flash-layer');
+      const clockStack = document.getElementById('clock-stack');
+
+      audioEngine.playMicroGlitchBurst();
+
+      microLayer.classList.remove('hidden');
+      microLayer.classList.add('flex');
+      document.body.classList.add('invert-strobe');
+
+      gsap.fromTo(flashLayer, { opacity: 0.85 }, { opacity: 0, duration: 0.18 });
+      gsap.set(microLayer, {
+        x: (Math.random() - 0.5) * 40,
+        y: (Math.random() - 0.5) * 40,
+        scale: 0.95 + Math.random() * 0.35,
+        rotation: (Math.random() - 0.5) * 12
+      });
+      gsap.fromTo(clockStack,
+        { x: (Math.random() - 0.5) * 32, y: (Math.random() - 0.5) * 24 },
+        { x: 0, y: 0, duration: 0.18, ease: 'rough' }
+      );
+
+      setTimeout(() => {
+        microLayer.classList.add('hidden');
+        microLayer.classList.remove('flex');
+        document.body.classList.remove('invert-strobe');
+      }, 175);
+    }
+
+    function showGhostFadeMessage(text, durationSec) {
+      const el = document.getElementById('ghost-message');
+      gsap.killTweensOf(el);
+      el.textContent = text;
+
+      const tl = gsap.timeline();
+      tl.fromTo(el,
+        { opacity: 0, filter: 'blur(10px)', scale: 0.95 },
+        { opacity: 1, filter: 'blur(0px)', scale: 1, duration: 0.42, ease: 'power2.out' }
+      );
+      tl.to(el,
+        { opacity: 0, filter: 'blur(12px)', scale: 1.04, duration: 0.5, ease: 'power2.in' },
+        Math.max(0.5, durationSec - 0.55)
+      );
+    }
+
+    function handleTenSecondPsychologicalSequence(secLeft) {
+      const scaleAmt = 1 + (10 - secLeft) * 0.045;
+      gsap.set('#row-sec', { scale: scaleAmt });
+
+      // Personalized Ghost Fade Messages
+      // 10.0s -> 7.0s
+      if (secLeft <= 10.0 && secLeft > 6.8 && activeGhostStage < 1) {
+        activeGhostStage = 1;
+        showGhostFadeMessage(`${formattedUserName} ơi... có ai đó đang đứng ngay sau lưng bạn kìa...`, 2.9);
+      }
+      // 6.8s -> 3.8s
+      else if (secLeft <= 6.8 && secLeft > 3.6 && activeGhostStage < 2) {
+        activeGhostStage = 2;
+        showGhostFadeMessage(`${formattedUserName} đang ngồi trong văn phòng JAT một mình đúng không?`, 2.9);
+      }
+      // 3.6s -> 0.5s
+      else if (secLeft <= 3.6 && secLeft > 0.2 && activeGhostStage < 3) {
+        activeGhostStage = 3;
+        showGhostFadeMessage(`Đừng quay đầu lại nhé ${formattedUserName}... Nó đang nhìn chằm chằm vào gáy bạn đấy!`, 3.0);
+      }
+
+      // 3 Micro-Jumpscares at 8s, 5s, and 2s
+      if (secLeft <= 8.05 && secLeft >= 7.75 && !microScareFlags.s8) {
+        microScareFlags.s8 = true;
+        triggerMicroJumpscare();
+      }
+      if (secLeft <= 5.05 && secLeft >= 4.75 && !microScareFlags.s5) {
+        microScareFlags.s5 = true;
+        triggerMicroJumpscare();
+      }
+      if (secLeft <= 2.05 && secLeft >= 1.75 && !microScareFlags.s2) {
+        microScareFlags.s2 = true;
+        triggerMicroJumpscare();
+      }
+    }
+
+    // =========================================================================
+    // 5. 3-SECOND FAKE "404 NOT FOUND" -> 1.6S JUMPSCARE -> AUTO REDIRECT RONALDO
+    // =========================================================================
+    function executeThreeSecondFake404Screen() {
+      if (rafId) cancelAnimationFrame(rafId);
+
+      // 1. Cut ALL audio immediately (100% silence)
+      audioEngine.cutAllSoundImmediately();
+      document.body.classList.remove('invert-strobe');
+
+      // 2. Hide horror UI and display realistic 404 Not Found error screen
+      document.getElementById('screen-3').classList.add('hidden');
+      document.getElementById('audio-btn').classList.add('hidden');
+      document.getElementById('ambient-vignette').classList.add('hidden');
+      document.getElementById('cursed-glow').classList.add('hidden');
+
+      const fake404 = document.getElementById('fake-404-screen');
+      fake404.classList.remove('hidden');
+      fake404.classList.add('flex');
+
+      // 3. Hold dead-silent 404 screen for EXACTLY 3000ms (3.0 seconds)
+      setTimeout(() => {
+        fake404.classList.add('hidden');
+        fake404.classList.remove('flex');
+        triggerFinalJumpscareAndRedirect();
+      }, 3000);
+    }
+
+    function triggerFinalJumpscareAndRedirect() {
+      const stage = document.getElementById('jumpscare-stage');
+      const entity = document.getElementById('nightmare-entity');
+      const flash = document.getElementById('flash-layer');
+
+      stage.classList.remove('hidden');
+      stage.classList.add('flex');
+
+      // Blast ear-splitting Jumpscare audio (1.6 seconds)
+      audioEngine.playFinalJumpscareBurst(1.6);
+
+      // Violent lunge from center of 404 screen: scale 0.1 -> 3.0 in 0.08s
+      gsap.fromTo(entity,
+        { scale: 0.1, x: 0, y: 0 },
+        { scale: 3.0, duration: 0.08, ease: 'power4.in' }
+      );
+
+      // High-intensity Red-Black-White Strobe & Violent Screen Shake for 1.6s
+      let strobeTick = 0;
+      const strobeInterval = setInterval(() => {
+        strobeTick++;
+        stage.classList.toggle('invert-strobe', strobeTick % 2 === 0);
+        flash.style.opacity = strobeTick % 2 === 0 ? '0.9' : '0';
+
+        gsap.set(entity, {
+          x: (Math.random() - 0.5) * 56,
+          y: (Math.random() - 0.5) * 56,
+          rotation: (Math.random() - 0.5) * 10
+        });
+      }, 45);
+
+      // Immediately after 1.6s (1600ms) Jumpscare, redirect to the Ronaldo article
+      setTimeout(() => {
+        clearInterval(strobeInterval);
+        try {
+          window.location.replace(TARGET_REDIRECT_URL);
+        } catch (e) {}
+        window.location.href = TARGET_REDIRECT_URL;
+      }, 1600);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
