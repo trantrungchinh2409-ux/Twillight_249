@@ -1,0 +1,47 @@
+name: JAT Design V0.1 Windows candidate
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'jat_design/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'run_bot.py'
+      - 'requirements*.txt'
+      - '.github/workflows/build-windows.yml'
+  pull_request:
+    paths:
+      - 'jat_design/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'run_bot.py'
+      - 'requirements*.txt'
+      - '.github/workflows/build-windows.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.8.10'
+          architecture: x64
+      - name: Test, build and execute actual EXE
+        shell: powershell
+        run: |
+          $Python = (Get-Command python).Source
+          & ./scripts/build_windows.ps1 -Python $Python
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload verified Windows candidate (not Win7 certified)
+        uses: actions/upload-artifact@v4
+        with:
+          name: JAT-Design-0.1.0-dev-Windows-candidate
+          if-no-files-found: error
+          path: |
+            dist/JAT-Design-0.1.0-dev.exe
+            dist/JAT-Design-0.1.0-dev.verification.json
+            dist/JAT-Design-0.1.0-dev-source.zip
+            dist/JAT-Design-0.1.0-dev-source.zip.sha256

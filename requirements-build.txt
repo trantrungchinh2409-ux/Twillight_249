@@ -1,0 +1,12 @@
+# Windows x64, CPython 3.8.10. Python 3.8 alone does not prove Win7 compatibility.
+pip==24.3.1
+setuptools==68.2.2
+wheel==0.45.1
+pyinstaller==5.13.2
+pyinstaller-hooks-contrib==2023.8
+altgraph==0.17.4
+packaging==24.2
+pefile==2023.2.7
+pywin32-ctypes==0.2.2
+importlib-metadata==7.2.1
+zipp==3.20.2
