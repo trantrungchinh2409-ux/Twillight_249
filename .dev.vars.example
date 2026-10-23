@@ -1,0 +1,3 @@
+# Placeholders only; use Cloudflare secret input for production. Never commit .dev.vars.
+ZALO_BOT_TOKEN="REPLACE_IN_SECURE_SETTINGS"
+ZALO_WEBHOOK_SECRET="REPLACE_IN_SECURE_SETTINGS"
