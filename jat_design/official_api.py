@@ -19,6 +19,10 @@ class ContractNotVerified(RuntimeError):
 class APIError(RuntimeError):
     """Safe messages only; never forward transport URL, body or description."""
 
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.code = code if type(code) is int else None
+
 
 class ProtocolError(APIError):
     pass
@@ -41,7 +45,7 @@ class Transport:
         self._opener = opener or urllib.request.build_opener(NoRedirect())
 
     def post(self, method, payload, timeout):
-        if method not in ('getMe', 'getUpdates', 'sendMessage'):
+        if method not in ('getMe', 'getUpdates', 'sendMessage', 'getWebhookInfo'):
             raise ValueError('Unsupported API method')
         token = urllib.parse.quote(self._token, safe='')
         request = urllib.request.Request(
@@ -55,13 +59,16 @@ class Transport:
             if len(data) > 1048576:
                 raise ProtocolError('API response too large')
             body = json.loads(data.decode('utf-8'))
+        except urllib.error.HTTPError as error:
+            raise APIError('HTTP rejected; details hidden', error.code) from None
         except APIError:
             raise
         except Exception:
             # HTTPError/URLError may contain the token-bearing request URL.
             raise APIError('API transport or JSON failure; request details hidden') from None
         if not isinstance(body, dict) or body.get('ok') is not True:
-            raise APIError('API rejected request; response details hidden')
+            code = body.get('error_code') if isinstance(body, dict) else None
+            raise APIError('API rejected request; response details hidden', code)
         if not isinstance(body.get('result'), dict):
             raise ProtocolError('Expected documented result object')
         return body['result']

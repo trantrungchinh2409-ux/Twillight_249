@@ -7,14 +7,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def package():
-    output = ROOT / 'dist' / 'JAT-Design-0.1.0-dev-source.zip'
+    output = ROOT / 'dist' / 'JAT-Design-Windows11-Polling-Test-source.zip'
     output.parent.mkdir(exist_ok=True)
     files = [ROOT / name for name in
              ('README.md', 'requirements.txt', 'requirements-build.txt',
-              'run_bot.py', '.gitignore', 'index.html')]
+              'run_bot.py', '.gitignore', 'index.html', 'START_TEST.bat',
+              'README_WINDOWS11.md', 'README_VI.md', 'DEPLOY_REPORT.md',
+              'package.json', 'package-lock.json', 'tsconfig.json',
+              'tsconfig.test.json', 'wrangler.jsonc', '.node-version',
+              '.dev.vars.example')]
     for directory, pattern in (('jat_design', '*.py'), ('tests', '*.py'),
                                ('scripts', '*.py'), ('scripts', '*.ps1'),
-                               ('docs', '*.md'), ('.github/workflows', '*.yml')):
+                               ('docs', '*.md'), ('.github/workflows', '*.yml'),
+                               ('src', '*.ts'), ('worker-tests', '*.ts'),
+                               ('migrations', '*.sql'), ('tools', '*.py')):
         files.extend((ROOT / directory).glob(pattern))
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(set(files)):
