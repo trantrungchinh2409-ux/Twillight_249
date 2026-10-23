@@ -46,3 +46,7 @@ Tài liệu ghi Workers Free 100.000 requests/ngày, CPU 10ms/request; D1 Free 5
 Đã lưu install_script/start_skill chuyển sang npm/Worker, giữ các custom domain cũ và bổ sung api.cloudflare.com, developers.cloudflare.com, dash.cloudflare.com. Đã khai báo yêu cầu CLOUDFLARE_API_TOKEN cho api.cloudflare.com; chỉ nhập qua cài đặt bí mật an toàn, không chat. Bản nháp không tự áp dụng hoặc Publish. Không đưa token Zalo vào cấu hình cloud thay thế secret của Worker; người dùng nhập token Zalo mới và webhook secret trực tiếp trong Cloudflare dashboard khi Worker được tạo.
 
 Cần cấp Cloudflare auth an toàn trước khi developer tạo D1 remote/deploy. Cần xác minh discriminator mention bằng tài liệu bổ sung hoặc event webhook thật đã xác thực, developer tự che dữ liệu nhạy cảm. Không yêu cầu người dùng viết code, cài dependency hoặc xử lý JSON. Chỉ khi các gate này được giải quyết mới bật gửi và nhờ người dùng thử @mention trong Zalo. Đây là điểm dừng theo điều 6 của đặc tả, không tuyên bố bot đang online.
+
+## Mốc source
+
+Nhánh `jat-design/cloudflare-v01`, commit triển khai `be8bffc`. CI: https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/39906682204 **success**: dependency install, typecheck, 20 test, build dry-run và xuất artifact đều hoàn thành. ZIP 27 file đã kiểm CRC, SHA-256 và so sánh byte từng file với source. Các file cũ đã đối chiếu diff với mốc trước, không thay đổi.
