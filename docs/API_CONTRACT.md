@@ -41,4 +41,10 @@ Không làm theo khuyến nghị log nguyên description trong file đính kèm:
 
 ## Cổng còn lại
 
-Cần schema/mẫu mention nhóm và mẫu reply-only đã che dữ liệu nhạy cảm để xác minh cách phân biệt. Sau đó thêm parser và test có nguồn, nối vòng polling có dừng/backoff, kiểm thử với bot thật và build/chạy Windows. Không tuyên bố V0.1 đạt yêu cầu khi cổng mention này chưa hoàn tất.
+Cần schema/mẫu mention nhóm và mẫu reply-only đã che dữ liệu nhạy cảm để xác minh cách phân biệt. Sau đó thêm parser và test có nguồn, nối vòng polling có dừng/backoff, kiểm thử với bot thật và kiểm thử Windows 7 thật. Build/chạy EXE trên Windows runner đã thành công; xem báo cáo run. Không tuyên bố V0.1 đạt yêu cầu khi cổng mention này chưa hoàn tất.
+
+## Đối chiếu SDK được trang chính thức dẫn tới
+
+Đã tải wheel `python-zalo-bot 0.1.9` từ PyPI, kiểm SHA-256 theo metadata PyPI và chỉ đọc source, không cài/thực thi. Class Message không có field mention được khai báo. Có class MessageEntity mang tên mention kế thừa từ thư viện nền, nhưng không có bằng chứng Message sử dụng nó cho event nhóm. Không lấy sự tồn tại class này làm schema API.
+
+Lỗi `Tunnel connection failed: 403 Forbidden` trước đây là lỗi proxy trước khi kết nối tới API, không phải response Bot API 403 trong bảng mã lỗi. Không áp dụng giả định retry lỗi server Zalo cho lỗi proxy này.

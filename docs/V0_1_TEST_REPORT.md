@@ -1,3 +1,20 @@
+# Kết quả bàn giao mới nhất
+
+- Windows CI **success**: https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/39902319964
+- Source commit được build: `83e84e66b9886599d6af2725a2a69197fd01d9cd`, nhánh `jat-design/v0.1-build-first`. Không đổi main.
+- Job Windows-2022 hoàn thành trong 1 phút 10 giây. Bước build chạy unittest trên Python 3.8.10 x64, PyInstaller, xác minh PE32+ x64, chạy self-test của EXE và xác nhận --live trả mã 2. Tất cả bước thành công. Đây là EXE ứng viên, chưa phải bot Zalo hoạt động.
+- Artifact đã được GitHub xác nhận tồn tại: `JAT-Design-0.1.0-dev-Windows-candidate`, ID `12479805429`, kích thước ZIP 7,223,991 byte, chưa hết hạn tại thời điểm kiểm tra. Link: https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/39902319964/artifacts/12479805429
+- SHA-256 artifact ZIP do GitHub trả: `749c03397477715afc2046c8cbc04fe3e2bee81be89fdd479f2a5b4bb26102b0`. Đây là digest artifact ZIP, không phải hash riêng của EXE.
+- Artifact chứa EXE, báo cáo xác minh EXE JSON, ZIP source tại commit build và SHA-256 source ZIP. Không tuyên bố đã tải/kiểm hash EXE trên Linux: tải artifact và log về máy hiện tại bị proxy chặn ở miền lưu trữ GitHub. Đã lưu bổ sung `productionresultssa10.blob.core.windows.net` và `results-receiver.actions.githubusercontent.com` vào bản nháp; cần áp dụng/Publish nếu muốn tải vào phiên cloud.
+- Source ZIP bàn giao tại workspace được tạo lại với tài liệu mới nhất; bản trước cập nhật báo cáo đã được giải nén, chạy lại **36/36 test** và self-test trên Python 3.8.20 Linux thành công. Kiểm tra đóng gói cuối được thực hiện sau khi cập nhật tài liệu.
+- Chưa gọi getMe/getUpdates/sendMessage bằng token thật; chưa có fixture nhóm thật; metadata mention chưa xác minh nên --live vẫn bị khóa. Chưa có vòng polling live. **Chưa đạt nghiệm thu đầy đủ V0.1.**
+- Chưa kiểm thử Windows 7 SP1 x64 thật. Không có kết luận tương thích Windows 7. Chưa phát triển AI hoặc GUI.
+- Người dùng không cần tự viết code, tự cài dependency hoặc tự biên tập JSON. Nếu thu được event thật trong phiên phát triển có quyền, developer chịu trách nhiệm che thông tin nhạy cảm trước khi lưu fixture; không chế tạo payload rồi coi đó là sự kiện thực tế.
+
+---
+
+Lịch sử các giai đoạn bên dưới được giữ lại; dùng kết quả mới nhất phía trên cho trạng thái hiện tại.
+
 # Cập nhật sau khi nhận tài liệu mã lỗi
 
 Ngày 23/10/2026: tài liệu docs.zaloplatforms.com đã truy cập HTTP 200 trở lại. Xem API_CONTRACT.md để biết nguồn và phần schema đã đối chiếu. File người dùng cung cấp được sao chép nguyên nội dung vào zalo-bot-error-code.user.md.

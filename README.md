@@ -28,7 +28,7 @@ python scripts/package_source.py
 
 ## Build Windows tự động
 
-Workflow `.github/workflows/build-windows.yml` chạy khi push/PR có thay đổi code/build, hoặc `workflow_dispatch`. Runner `windows-2022`, Python **3.8.10 x64**, dependency build được cố định trong `requirements-build.txt`. Chưa đẩy workflow lên GitHub hoặc chạy workflow trong phiên này.
+Workflow `.github/workflows/build-windows.yml` chạy khi push/PR có thay đổi code/build, hoặc `workflow_dispatch`. Runner `windows-2022`, Python **3.8.10 x64**, dependency build được cố định trong `requirements-build.txt`. Workflow đã được đẩy lên nhánh `jat-design/v0.1-build-first`; run Windows đầu tiên: https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/39902319964. Run này đã thành công, EXE có trong artifact Windows candidate. Xem báo cáo để biết giới hạn tải artifact và phần Zalo live còn thiếu.
 
 Script `scripts/build_windows.ps1` tự xử lý dependency, chạy test, PyInstaller, xác minh PE32+ x64, chạy chính EXE với `--self-test` và kiểm tra `--live` vẫn bị khóa. Khi lỗi, script dừng và workflow không tải gói như một bản thành công. Cách gọi kỹ thuật: `powershell -ExecutionPolicy Bypass -File scripts/build_windows.ps1`. ExecutionPolicy chỉ áp dụng phiên shell này; không tắt TLS hoặc kiểm tra chữ ký installer.
 
