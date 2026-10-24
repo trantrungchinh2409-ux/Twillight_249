@@ -4,6 +4,7 @@ Group mention metadata is NOT documented in the pages inspected. Group updates
 fail closed, including if an unverified 'mentions' field happens to be present.
 """
 import json
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,9 +20,11 @@ class ContractNotVerified(RuntimeError):
 class APIError(RuntimeError):
     """Safe messages only; never forward transport URL, body or description."""
 
-    def __init__(self, message, code=None):
+    def __init__(self, message, code=None, kind='unknown'):
         super().__init__(message)
         self.code = code if type(code) is int else None
+        self.kind = kind if kind in ('unknown', 'http', 'api', 'timeout', 'tls',
+                                     'network', 'invalid_json', 'redirect') else 'unknown'
 
 
 class ProtocolError(APIError):
@@ -34,7 +37,7 @@ class MentionContractNotVerified(ContractNotVerified):
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        raise APIError('Redirect rejected')
+        raise APIError('Redirect rejected', kind='redirect')
 
 
 class Transport:
@@ -61,15 +64,28 @@ class Transport:
                 raise ProtocolError('API response too large')
             body = json.loads(data.decode('utf-8'))
         except urllib.error.HTTPError as error:
-            raise APIError('HTTP rejected; details hidden', error.code) from None
+            raise APIError('HTTP rejected; details hidden', error.code, 'http') from None
         except APIError:
             raise
+        except (TimeoutError, ssl.SSLError, urllib.error.URLError) as error:
+            reason = error.reason if isinstance(error, urllib.error.URLError) else error
+            kind = ('timeout' if isinstance(reason, TimeoutError) else
+                    'tls' if isinstance(reason, ssl.SSLError) else 'network')
+            raise APIError('Transport failed; details hidden', kind=kind) from None
+        except (json.JSONDecodeError, UnicodeError):
+            raise APIError('Invalid JSON; details hidden', kind='invalid_json') from None
         except Exception:
             # HTTPError/URLError may contain the token-bearing request URL.
             raise APIError('API transport or JSON failure; request details hidden') from None
         if not isinstance(body, dict) or body.get('ok') is not True:
             code = body.get('error_code') if isinstance(body, dict) else None
-            raise APIError('API rejected request; response details hidden', code)
+            if code is None and isinstance(body, dict):
+                code = body.get('error')
+            # Zalo getUpdates uses API error_code=408 for an empty long poll.
+            # This is a parsed API response, NOT HTTP 408 or a socket timeout.
+            if method == 'getUpdates' and type(code) is int and code == 408:
+                return {}
+            raise APIError('API rejected request; response details hidden', code, 'api')
         if method == 'deleteWebhook' and body.get('result') is True:
             return True
         if not isinstance(body.get('result'), dict):

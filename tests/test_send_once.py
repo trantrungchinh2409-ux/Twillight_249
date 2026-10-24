@@ -23,6 +23,33 @@ class API:
 
 
 class OnceTests(unittest.TestCase):
+    def test_preflight_two_successes_no_send(self):
+        from test_polling_test import Fake
+        from jat_design.send_once import preflight
+        api, statuses = Fake({}, EVENT), []
+        self.assertTrue(preflight(api, statuses.append, output=lambda _: None))
+        self.assertEqual(api.calls, [('getUpdates', {'timeout': '30'}, 40)]*2)
+        self.assertEqual(statuses[-1], {'phase': 'preflight_passed', 'check': 2})
+
+    def test_preflight_stops_first_error_with_actual_safe_code(self):
+        from test_polling_test import Fake
+        from jat_design.send_once import preflight
+        from jat_design.official_api import APIError
+        api, statuses = Fake(APIError('private-url', 429, 'api'), EVENT), []
+        self.assertFalse(preflight(api, statuses.append, output=lambda _: None))
+        self.assertEqual(len(api.calls), 1)
+        self.assertEqual(statuses[-1], {'phase': 'preflight_failed', 'kind': 'api', 'code': 429})
+
+    def test_one_session_receive_does_not_retry_network_error(self):
+        from test_polling_test import Fake
+        from jat_design.polling_test import receive_one
+        from jat_design.official_api import APIError
+        api = Fake(APIError('hidden', kind='network'), EVENT)
+        waits = []
+        self.assertIsNone(receive_one(api, wait=waits.append, output=lambda _: None, stop_on_error=True))
+        self.assertEqual(waits, [])
+        self.assertEqual(len(api.calls), 1)
+
     def test_exact_reply_single_global_attempt_even_new_event(self):
         state, api = State(':memory:'), API()
         try:
@@ -89,6 +116,6 @@ class OnceTests(unittest.TestCase):
         unrelated = copy.deepcopy(EVENT)
         unrelated['message']['text'] = 'not the marker'
         api = Fake(unrelated, EVENT)
-        self.assertEqual(receive_one(api, wait=lambda _: None,
+        self.assertEqual(receive_one(api, wait=lambda _: None, output=lambda _: None,
                          accept=lambda e: eligible(e, 'bot', MARKER)), EVENT)
         self.assertEqual([c[0] for c in api.calls], ['getUpdates', 'getUpdates'])

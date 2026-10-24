@@ -28,6 +28,26 @@ class Fake:
 
 
 class PollingTests(unittest.TestCase):
+    def test_poll_error_status_is_not_misreported_as_empty(self):
+        api = Fake(APIError('secret-url', 429, 'api'), EVENT)
+        logs, statuses = [], []
+        self.assertEqual(p.receive_one(api, wait=lambda _: None, output=logs.append,
+                                     on_status=statuses.append), EVENT)
+        self.assertEqual(statuses[0], {'phase': 'poll_error', 'kind': 'api', 'code': 429})
+        self.assertNotIn('secret-url', str(logs)+str(statuses))
+        self.assertNotIn('Chưa có dữ liệu', str(logs))
+
+    def test_filter_rejection_is_visible_and_does_not_send(self):
+        api = Fake(EVENT, EVENT)
+        statuses, logs = [], []
+        calls = iter([False, True])
+        self.assertEqual(p.receive_one(api, wait=lambda _: None, output=logs.append,
+                                     accept=lambda _: next(calls), on_status=statuses.append), EVENT)
+        self.assertEqual(statuses, [{'phase': 'event_rejected_by_send_filter'},
+                                    {'phase': 'event_accepted'}])
+        self.assertTrue(logs)
+        self.assertEqual([c[0] for c in api.calls], ['getUpdates', 'getUpdates'])
+
     def test_interaction_metadata_is_not_destroyed(self):
         redactor = p.Redactor('bot-id')
         cleaned = redactor.clean({'message_type': 'MENTION', 'text': 'private content'})

@@ -6,7 +6,7 @@ from pathlib import Path
 import secrets
 import sys
 from .official_api import APIError, OfficialAPI, Transport
-from .polling_test import TokenLock, ReadOnlyTransport, receive_one, webhook_enabled
+from .polling_test import TokenLock, ReadOnlyTransport, receive_one, webhook_enabled, valid_event
 from .state import State
 from .webhook_switch import hidden
 
@@ -36,7 +36,7 @@ def eligible(result, bot_id, marker):
             and marker in message['text'].split())
 
 
-def send_once(api, state, bot_id, event, marker):
+def send_once(api, state, bot_id, event, marker, on_error=None):
     if not eligible(event, bot_id, marker):
         return 'ignored'
     bot_key = digest(bot_id)
@@ -53,13 +53,37 @@ def send_once(api, state, bot_id, event, marker):
         ack = api.sendMessage(message['chat']['id'], REPLY)
         if not isinstance(ack, dict) or not isinstance(ack.get('message_id'), str) or not ack['message_id']:
             raise APIError('No send acknowledgement')
-    except Exception:
+    except Exception as error:
         state.mark(bot_key, APPROVAL, 'uncertain')
         state.mark(bot_key, event_key, 'uncertain')
+        if on_error is not None:
+            on_error({'phase': 'send_error',
+                      'kind': error.kind if isinstance(error, APIError) else 'unknown',
+                      'code': error.code if isinstance(error, APIError) else None})
         return 'uncertain'
     state.mark(bot_key, APPROVAL, 'api_acknowledged:'+digest(ack['message_id']))
     state.mark(bot_key, event_key, 'api_acknowledged')
     return 'api_acknowledged'
+
+
+def preflight(transport, status, output=print):
+    output('KIỂM TRA getUpdates — chưa gửi tin thử vào nhóm. Có thể chờ khoảng 80 giây.')
+    for number in (1, 2):
+        status({'phase': 'preflight_pending', 'check': number})
+        try:
+            result = transport.post('getUpdates', {'timeout': '30'}, timeout=40)
+            if result != {} and not valid_event(result):
+                raise APIError('Unexpected event contract', kind='api')
+        except APIError as error:
+            status({'phase': 'preflight_failed', 'kind': error.kind, 'code': error.code})
+            output('OFF — getUpdates lỗi: loại=%s, mã=%s. Không thử lại, không gửi tin.' %
+                   (error.kind, error.code if error.code is not None else 'không có'))
+            return False
+        # Events already queued are consumed only as connection evidence. The new
+        # trigger nonce is not created yet; no preflight event can cause a send.
+        status({'phase': 'preflight_passed', 'check': number})
+        output('getUpdates: lần %s/2 thành công.' % number)
+    return True
 
 
 def main():
@@ -89,16 +113,33 @@ def main():
                 if row:
                     print('Đã có lần gửi/đặt chỗ trước. KHÔNG gửi lại. Giữ nguyên one_shot.db để kiểm tra.')
                     return 4
+                counts = {'poll_errors': 0, 'rejected_events': 0}
+                def record_poll(detail):
+                    if detail['phase'] == 'poll_error':
+                        counts['poll_errors'] += 1
+                    if detail['phase'] == 'event_rejected_by_send_filter':
+                        counts['rejected_events'] += 1
+                    safe_status = dict(counts, last=detail,
+                                       at_utc=datetime.now(timezone.utc).isoformat())
+                    (RUNTIME/'one_shot_poll_status.json').write_text(
+                        json.dumps(safe_status, ensure_ascii=False), encoding='utf-8')
+                if not preflight(ReadOnlyTransport(transport), record_poll):
+                    return 1
                 marker = 'JAT-'+secrets.token_hex(8).upper()
-                print('ON — Trong ĐÚNG NHÓM đã thử A, chọn @Bot JAT Design rồi gửi kèm mã này:')
+                print('ON — Hai lần getUpdates đã đạt. Bây giờ trong ĐÚNG NHÓM đã thử A, @bot kèm mã:')
                 print(marker)
-                print('Không đăng mã vào nhóm khác. Chờ tối đa khoảng 5 phút.')
+                print('Chỉ gửi một tin có mã. Chờ tối đa khoảng 5 phút; lỗi đầu tiên sẽ dừng.')
                 event = receive_one(ReadOnlyTransport(transport),
-                                    accept=lambda e: eligible(e, bot_id, marker))
+                                    accept=lambda e: eligible(e, bot_id, marker),
+                                    on_status=record_poll, stop_on_error=True)
                 if event is None:
                     print('OFF — Chưa có tin nhóm khớp mã; không gửi.')
                     return 1
-                outcome = send_once(api, state, bot_id, event, marker)
+                def record_send_error(detail):
+                    record_poll(detail)
+                    print('sendMessage lỗi: loại=%s, mã=%s; kết quả chưa chắc chắn, không gửi lại.' %
+                          (detail['kind'], detail['code'] if detail['code'] is not None else 'không có'))
+                outcome = send_once(api, state, bot_id, event, marker, on_error=record_send_error)
                 receipt = {'at_utc': datetime.now(timezone.utc).isoformat(), 'outcome': outcome,
                            'group_event': True, 'reply': REPLY, 'mention_verified': False,
                            'selection': 'fresh_user_marker_in_group', 'automatic_retry': False}
@@ -115,6 +156,10 @@ def main():
     except KeyboardInterrupt:
         print('\nOFF — Đã dừng. Nếu đang gửi thì kết quả có thể chưa rõ; không tự gửi lại.')
         return 130
+    except APIError as error:
+        print('OFF — API lỗi: loại=%s, mã=%s. Không tự thử lại.' %
+              (error.kind, error.code if error.code is not None else 'không có'))
+        return 1
     except Exception:
         print('OFF — Chưa xác nhận hoàn tất; chi tiết nhạy cảm đã ẩn. Không tự gửi lại.')
         return 1

@@ -40,6 +40,33 @@ class Opener:
 
 
 class OfficialTests(unittest.TestCase):
+    def test_api_408_is_empty_only_for_get_updates(self):
+        body = {'ok': False, 'error_code': 408, 'description': 'private details'}
+        transport = Transport('synthetic-token', Opener(body))
+        self.assertEqual(transport.post('getUpdates', {'timeout': '30'}, 40), {})
+        with self.assertRaises(APIError) as result:
+            transport.post('getMe', {}, 15)
+        self.assertEqual(result.exception.kind, 'api')
+        self.assertEqual(result.exception.code, 408)
+
+    def test_http_408_is_not_normalized_to_empty(self):
+        class HttpTimeout(Opener):
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(request.full_url, 408, 'private', {}, None)
+        with self.assertRaises(APIError) as result:
+            Transport('synthetic-token', HttpTimeout({})).post('getUpdates', {'timeout': '30'}, 40)
+        self.assertEqual(result.exception.kind, 'http')
+        self.assertEqual(result.exception.code, 408)
+
+    def test_timeout_has_safe_category_not_raw_exception(self):
+        class TimedOut(Opener):
+            def open(self, request, timeout):
+                raise urllib.error.URLError(TimeoutError('private-url-token'))
+        with self.assertRaises(APIError) as result:
+            Transport('synthetic-token', TimedOut({})).post('getUpdates', {'timeout': '30'}, 40)
+        self.assertEqual(result.exception.kind, 'timeout')
+        self.assertNotIn('private', str(result.exception))
+
     def api(self, result):
         self.opener = Opener({'ok': True, 'result': result})
         return OfficialAPI(Transport('dummy/not-a-real-token', self.opener))

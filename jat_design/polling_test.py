@@ -120,12 +120,20 @@ class Redactor:
 
 
 def receive_one(transport, seconds=300, clock=time.monotonic, wait=time.sleep, output=print,
-                accept=None):
+                accept=None, on_status=None, stop_on_error=False):
     deadline, errors = clock()+seconds, 0
     while clock() < deadline:
         try:
             result = transport.post('getUpdates', {'timeout': '30'}, timeout=40)
         except APIError as error:
+            detail = {'phase': 'poll_error', 'kind': error.kind, 'code': error.code}
+            if on_status is not None:
+                on_status(detail)
+            output('Lỗi getUpdates: loại=%s, mã=%s. Đây không phải kết quả nhận rỗng.' %
+                   (error.kind, error.code if error.code is not None else 'không có'))
+            if stop_on_error:
+                output('OFF — Dừng ở lỗi đầu tiên; không tự thử lại.')
+                return None
             if error.code in (400, 401, 403, 404, 409):
                 output('Dừng: API từ chối yêu cầu, mã %s. Không đổi token/webhook.' % error.code)
                 return None
@@ -134,14 +142,19 @@ def receive_one(transport, seconds=300, clock=time.monotonic, wait=time.sleep, o
                 output('Dừng sau 3 lỗi liên tiếp. Chi tiết nhạy cảm đã ẩn.')
                 return None
             delay = 30 if error.code == 429 else 2**errors
-            output('Chưa có dữ liệu; đợi %s giây rồi thử lại.' % delay)
+            output('Đợi %s giây trước lần thử lại có giới hạn.' % delay)
             wait(min(delay, max(0, deadline-clock())))
             continue
         errors = 0
         if valid_event(result):
             if accept is not None and not accept(result):
+                output('ĐÃ NHẬN sự kiện nhưng không đạt điều kiện gửi; không gọi sendMessage.')
+                if on_status is not None:
+                    on_status({'phase': 'event_rejected_by_send_filter'})
                 wait(min(0.25, max(0, deadline-clock())))
                 continue
+            if on_status is not None:
+                on_status({'phase': 'event_accepted'})
             return result
         if result not in ({}, None):
             output('Dữ liệu chưa khớp hợp đồng sự kiện; không coi là thành công.')
