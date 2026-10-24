@@ -19,6 +19,18 @@ ANSWER = {'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text':
 
 
 class GeminiTests(unittest.TestCase):
+    def test_trial_budget_survives_recreating_controller(self):
+        from jat_design.ai_reply import TrialQuota
+        from jat_design.state import State
+        state = State(':memory:')
+        try:
+            quota = TrialQuota(state, 'dummy-bot')
+            self.assertEqual(quota.used(), 0)
+            for _ in range(3): self.assertTrue(quota.claim())
+            reopened = TrialQuota(state, 'dummy-bot')
+            self.assertEqual(reopened.used(), 3)
+            self.assertFalse(reopened.claim())
+        finally: state.close()
     def test_model_is_checked_with_key_header_not_url(self):
         opener = Sequence({'models': [{'name': PREFERRED[0], 'supportedGenerationMethods': ['generateContent']}]})
         client = Gemini('synthetic-key', 'Prompt', opener)

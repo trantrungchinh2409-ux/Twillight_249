@@ -10,7 +10,7 @@ Mốc AUTO đã thành công được giữ trên nhánh `jat-design/stable-auto
 4. Nhập Gemini API key ẩn. Chương trình gọi models.list, ưu tiên gemini-2.5-flash-lite, nếu không có thì gemini-2.5-flash; chỉ khi tài khoản liệt kê model với generateContent. Không tự chuyển Pro/preview hoặc model khác. Nếu hai model đều không khả dụng thì OFF, báo Codex. Model khả dụng trên tài liệu không thay kiểm tra khóa/tài khoản thực.
 5. Sau khi Gemini trả lời riêng thành công, START_AI mới hỏi Bot Token ẩn. Kiểm đúng bot/nhóm đã xác minh và webhook tắt. Không tự thay webhook.
 6. Mặc định OFF. Nhập ON rồi Enter. Trong đúng nhóm thử, gửi `@Bot JAT Design thủ đô Việt Nam là gì?`.
-7. OFF ngăn gửi mới, ON bật lại, QUIT/Ctrl+C dừng. Request Zalo đã bắt đầu không thể thu hồi. Chỉ tối đa 3 lần thử phản hồi/phiên, đủ 3 tự dừng; OFF/ON không reset bộ đếm. Câu test Gemini riêng là một request bổ sung, không gửi Zalo.
+7. OFF ngăn gửi mới, ON bật lại, QUIT/Ctrl+C dừng. Request Zalo đã bắt đầu không thể thu hồi. Lần thử đầu tối đa 3 lượt phản hồi, lưu bền cả khi đóng/mở chương trình; đủ 3 tự dừng, không tự reset quota. Câu test Gemini riêng là một request bổ sung, không gửi Zalo.
 
 ## Ngân sách và dữ liệu
 
@@ -23,6 +23,6 @@ Mốc AUTO đã thành công được giữ trên nhánh `jat-design/stable-auto
 
 ## Bằng chứng và giới hạn
 
-92/92 test offline đạt tại Windows. Chưa xác nhận Gemini live/models.list trên khóa của chủ dự án hoặc 3 câu AI hiển thị trong Zalo khi tạo gói; chương trình có cổng kiểm riêng trước gửi. Không tuyên bố tích hợp live thành công từ unit test.
+93/93 test offline đạt tại Windows. Chưa xác nhận Gemini live/models.list trên khóa của chủ dự án hoặc 3 câu AI hiển thị trong Zalo khi tạo gói; chương trình có cổng kiểm riêng trước gửi. Không tuyên bố tích hợp live thành công từ unit test.
 
 Tài liệu chính thức đã mở: https://ai.google.dev/api/models ; https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite ; https://ai.google.dev/gemini-api/docs/generate-content/thinking . API REST generateContent chỉ có một user turn, không tools hoặc history. Chưa Railway.
