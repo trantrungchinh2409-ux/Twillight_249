@@ -1,3 +1,9 @@
+# Bản hiện hành — JAT Design AI trên Windows 11
+
+Xem [hướng dẫn khóa API và hạn mức](README_API_LIMITS_VI.md). Mốc AI cũ đã chạy thật; bản nâng cấp dùng DPAPI và hạn mức bền 10 lượt/2 phút. Phần bên dưới là tài liệu V0.1 lịch sử, không phải hướng dẫn START_AI hiện tại.
+
+---
+
 # JAT Design — Zalo Bot V0.1 (ứng viên offline)
 
 Tiếp tục trong kho `Twillight_249`; giữ nguyên `index.html` và báo cáo thiết lập cũ. **Chưa phải bản bot hoạt động với Zalo thật. Chưa có chứng nhận tương thích Windows 7.** Chưa phát triển Gemini, OpenRouter hay Tkinter.

@@ -2,6 +2,9 @@
 import json
 import re
 import ssl
+import math
+import time
+from email.utils import parsedate_to_datetime
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -14,11 +17,45 @@ RULES = ('Trả lời bằng tiếng Việt, ngắn gọn 1–2 câu, không qu�
 
 
 class GeminiError(APIError):
-    def __init__(self, message, code=None, kind='unknown', provider_status=None):
+    def __init__(self, message, code=None, kind='unknown', provider_status=None,
+                 reason=None, retry_after=None):
         super().__init__(message, code, kind)
         allowed = {'NOT_FOUND', 'INVALID_ARGUMENT', 'PERMISSION_DENIED', 'UNAUTHENTICATED',
                    'RESOURCE_EXHAUSTED', 'UNAVAILABLE', 'INTERNAL', 'FAILED_PRECONDITION'}
-        self.provider_status = provider_status if provider_status in allowed else None
+        self.provider_status = provider_status if isinstance(provider_status, str) and provider_status in allowed else None
+        reasons = {'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_REVOKED',
+                   'API_KEY_SERVICE_BLOCKED', 'API_KEY_IP_ADDRESS_BLOCKED',
+                   'API_KEY_HTTP_REFERRER_BLOCKED', 'BILLING_DISABLED',
+                   'BILLING_NOT_ACTIVE', 'PROJECT_BILLING_DISABLED'}
+        self.reason = reason if isinstance(reason, str) and reason in reasons else None
+        self.retry_after = retry_after if type(retry_after) in (int, float) and math.isfinite(retry_after) and retry_after >= 0 else None
+
+
+def error_details(body, headers=None, now=time.time):
+    """Extract only closed error categories and a wait; never return provider text."""
+    error = body.get('error', {}) if isinstance(body, dict) else {}
+    if not isinstance(error, dict): error = {}
+    waits, reason = [], None
+    raw = headers.get('Retry-After') if headers else None
+    if raw:
+        try: waits.append(max(0, float(raw)))
+        except (ValueError, TypeError):
+            try: waits.append(max(0, parsedate_to_datetime(raw).timestamp()-now()))
+            except Exception: pass
+    details = error.get('details', [])
+    if isinstance(details, list):
+        for detail in details:
+            if not isinstance(detail, dict): continue
+            if str(detail.get('@type', '')).endswith('ErrorInfo'):
+                reason = detail.get('reason')
+            if str(detail.get('@type', '')).endswith('RetryInfo'):
+                delay = detail.get('retryDelay', '')
+                try:
+                    if isinstance(delay, str) and delay.endswith('s'):
+                        waits.append(max(0, float(delay[:-1])))
+                except ValueError: pass
+    waits = [x for x in waits if math.isfinite(x)]
+    return error.get('status'), reason, max(waits) if waits else None
 
 
 def compact(text):
@@ -49,14 +86,14 @@ class Gemini:
                 raise GeminiError('Response too large')
             result = json.loads(data.decode('utf-8'))
         except urllib.error.HTTPError as error:
-            status = None
+            body = {}
             try:
                 body = json.loads(error.read(16384).decode('utf-8'))
-                status = body.get('error', {}).get('status')
             except Exception:
                 pass
+            status, reason, retry = error_details(body, error.headers)
             # Never expose the provider message: it can echo a key or prompt.
-            raise GeminiError('Gemini HTTP failure; details hidden', error.code, 'http', status) from None
+            raise GeminiError('Gemini HTTP failure; details hidden', error.code, 'http', status, reason, retry) from None
         except (TimeoutError, ssl.SSLError, urllib.error.URLError) as error:
             reason = error.reason if isinstance(error, urllib.error.URLError) else error
             kind = 'timeout' if isinstance(reason, TimeoutError) else 'tls' if isinstance(reason, ssl.SSLError) else 'network'
@@ -67,7 +104,8 @@ class Gemini:
             raise GeminiError('Gemini response failure; details hidden', kind='invalid_json') from None
         if not isinstance(result, dict) or 'error' in result:
             code = result.get('error', {}).get('code') if isinstance(result, dict) and isinstance(result.get('error'), dict) else None
-            raise GeminiError('Gemini API rejected request', code, 'api')
+            status, reason, retry = error_details(result)
+            raise GeminiError('Gemini API rejected request', code, 'api', status, reason, retry)
         return result
 
     def select_model(self):

@@ -1,0 +1,118 @@
+"""Windows launcher for stored Gemini keys and persistent local AI limits."""
+import argparse
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import sys
+import threading
+import time
+from .auto_reply import Controls, verified_group
+from .gemini_client import GeminiError
+from .key_vault import Vault, KeyPool, VAULT_LOCK
+from .managed_limits import ManagedResponder
+from .official_api import APIError, OfficialAPI, Transport
+from .polling_test import TokenLock, ReadOnlyTransport, receive_one, webhook_enabled
+from .state import State
+from .webhook_switch import RUNTIME, hidden
+
+
+def status_text(snapshot, provider_until=0, now=None):
+    now = time.time() if now is None else now
+    local = max(0, snapshot.get('local_until', 0)-now)
+    google = max(0, snapshot.get('google_until', 0)-now, provider_until-now)
+    remaining = 0 if local else max(0, 10-sum(t > now-120 for t in snapshot.get('window_times', [])))
+    return 'STATUS — còn %s/10 lượt trong 2 phút; nghỉ nội bộ %ss; chờ Google %ss; khóa gửi chưa rõ: %s.' % (
+        remaining, int(local+0.999), int(google+0.999), snapshot.get('uncertain', False))
+
+
+def keyboard(controls, status):
+    while not controls.snapshot()[1]:
+        line = sys.stdin.readline()
+        command = line.strip().upper() if line else 'QUIT'
+        if command == 'STATUS': print(status(), flush=True); continue
+        if command not in ('ON', 'OFF', 'QUIT', 'Q'):
+            print('Nhập ON / OFF / STATUS / QUIT rồi Enter.'); continue
+        active = controls.command(command)
+        print('ON — sẵn sàng nhận tin mới.' if active else 'OFF — không bắt đầu gửi mới.', flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--prompt', type=Path, default=Path(__file__).resolve().parents[1]/'SYSTEM_PROMPT.txt')
+    args = parser.parse_args()
+    print('JAT AI — khóa DPAPI, mặc định OFF, 10 lượt/2 phút, nghỉ 5 phút. Không lưu lịch sử nhóm.')
+    if not sys.stdin.isatty(): return 2
+    controls, state = Controls(), None
+    try:
+        prompt = args.prompt.read_text(encoding='utf-8-sig').strip()
+        if not prompt or len(prompt) > 4000: raise ValueError('Invalid prompt')
+        with TokenLock(VAULT_LOCK):
+            vault = Vault()
+            if not vault.data['items']:
+                print('Chưa có khóa đã lưu. Đóng cửa sổ và mở SETUP_API.bat trước.'); return 2
+            print('Đã đọc %s khóa mã hóa. Không kiểm hàng loạt hoặc gọi Gemini khi khởi động.' % len(vault.data['items']))
+            pool = KeyPool(vault, prompt)
+            token = hidden('Bot Token Zalo (ẩn): ').strip()
+            if not token: return 2
+            with TokenLock(token):
+                transport = Transport(token)
+                zalo = OfficialAPI(transport)
+                bot_id = zalo.getMe()
+                if webhook_enabled(ReadOnlyTransport(transport)):
+                    print('Webhook đang bật; dừng, không thay đổi.'); return 3
+                group_id = verified_group(RUNTIME, bot_id)
+                state = State(RUNTIME/'ai_reply.db')
+                engine = ManagedResponder(state, bot_id, group_id)
+                if engine.blocked():
+                    print('OFF — có lần gửi chưa rõ từ phiên trước. Giữ DB và báo Codex.'); return 4
+                cache, lock = {}, threading.Lock()
+                def refresh():
+                    with lock:
+                        cache['snapshot'] = engine.status()
+                        cache['provider_until'] = time.time()+pool.wait_remaining()
+                def status():
+                    with lock: return status_text(cache['snapshot'], cache['provider_until'])
+                refresh()
+                print(status())
+                print('ON / OFF / STATUS / QUIT rồi Enter. Chỉ nhóm thử đã xác minh.')
+                threading.Thread(target=keyboard, args=(controls, status), daemon=True).start()
+                while True:
+                    refresh()
+                    on, quit_now, armed = controls.snapshot()
+                    if quit_now: return 0
+                    if not on:
+                        time.sleep(0.2); continue
+                    errors = []
+                    event = receive_one(ReadOnlyTransport(transport), seconds=35, stop_on_error=True,
+                        on_status=lambda s: errors.append(s) if s.get('phase') == 'poll_error' else None)
+                    if errors: return 1
+                    if event is None: continue
+                    active, quit_now, current_arm = controls.snapshot()
+                    if quit_now or not active or current_arm != armed: continue
+                    outcome = engine.handle(zalo, pool, event, active, armed,
+                                            still_on=lambda: controls.snapshot()[0])
+                    refresh()
+                    report = {'at_utc': datetime.now(timezone.utc).isoformat(), 'outcome': outcome,
+                              'remaining': cache['snapshot']['remaining'], 'model': pool.model,
+                              'history_sent': False, 'maxOutputTokens': 128}
+                    if engine.last_error:
+                        report['error'] = engine.last_error
+                        print('CMD lỗi riêng: %s' % json.dumps(engine.last_error), flush=True)
+                    (RUNTIME/'managed_ai_status.json').write_text(json.dumps(report), encoding='utf-8')
+                    print('AI: '+outcome+' — '+status(), flush=True)
+                    if outcome == 'uncertain_blocked':
+                        print('OFF — gửi chưa rõ kết quả, không tự gửi lại.'); return 1
+                    if outcome in ('invalid_key', 'billing_problem', 'provider_error'):
+                        print('OFF — kiểm tra khóa/thanh toán/kết nối trong CMD, không báo nạp tiền trong nhóm.'); return 1
+    except KeyboardInterrupt:
+        print('\nOFF — dừng, không tự gửi lại request đang diễn ra.'); return 130
+    except APIError as error:
+        print('OFF — loại=%s mã=%s; không in nội dung bí mật.' % (error.kind, error.code)); return 1
+    except Exception:
+        print('OFF — không mở được kho/cấu hình/khóa. Đóng SETUP_API và poller khác; không xóa database.'); return 1
+    finally:
+        controls.command('QUIT')
+        if state is not None: state.close()
+
+
+if __name__ == '__main__': raise SystemExit(main())
