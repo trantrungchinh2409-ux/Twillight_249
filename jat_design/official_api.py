@@ -45,7 +45,8 @@ class Transport:
         self._opener = opener or urllib.request.build_opener(NoRedirect())
 
     def post(self, method, payload, timeout):
-        if method not in ('getMe', 'getUpdates', 'sendMessage', 'getWebhookInfo'):
+        if method not in ('getMe', 'getUpdates', 'sendMessage', 'getWebhookInfo',
+                          'deleteWebhook', 'setWebhook'):
             raise ValueError('Unsupported API method')
         token = urllib.parse.quote(self._token, safe='')
         request = urllib.request.Request(
@@ -69,6 +70,8 @@ class Transport:
         if not isinstance(body, dict) or body.get('ok') is not True:
             code = body.get('error_code') if isinstance(body, dict) else None
             raise APIError('API rejected request; response details hidden', code)
+        if method == 'deleteWebhook' and body.get('result') is True:
+            return True
         if not isinstance(body.get('result'), dict):
             raise ProtocolError('Expected documented result object')
         return body['result']

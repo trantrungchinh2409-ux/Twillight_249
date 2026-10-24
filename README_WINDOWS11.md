@@ -22,4 +22,14 @@ Chưa gửi tin nên không có nguy cơ spam từ bản thử. Dedup/cooldown c
 
 ## Các giai đoạn tiếp theo
 
+## Chuyển tạm sang polling (chủ dự án đã duyệt ngày 24/10/2026)
+
+Đóng cửa sổ START_TEST cũ rồi mở `SWITCH_TO_POLLING.bat`. Nhập Bot Token ẩn, tiếp theo là **ZALO_WEBHOOK_SECRET cũ** (không phải Bot Token). Chương trình lưu URL và secret do bạn nhập vào `runtime/webhook_backup_*.bin`, mã hóa DPAPI theo tài khoản Windows hiện tại. Bản sao phải đọc/giải mã kiểm lại thành công trước khi gọi deleteWebhook. Không đổi/xóa Worker, không reset token. Không có secret cũ thì dừng trước mutation; không tự tạo secret thay thế. Secret do bạn nhập chưa được đối chiếu với secret trên Worker, vì Cloudflare/Zalo không cho đọc lại giá trị đó.
+
+Chỉ khi getWebhookInfo sau delete trả URL rỗng mới báo **WEBHOOK ĐÃ TẮT**. Lúc đó mở START_TEST.bat, chọn A, chờ ON rồi @bot thật trong nhóm. Công cụ vẫn không gửi trả lời.
+
+Khôi phục: đóng mọi poller rồi mở `RESTORE_WEBHOOK.bat`, nhập token và gõ KHOI PHUC. Nó dùng bản sao gần nhất cùng bot và tài khoản Windows; nếu webhook khác đang bật thì từ chối ghi đè. Không chuyển file sao lưu sang máy/tài khoản khác. Không đưa runtime lên chat/Git hoặc ZIP. Khôi phục URL không chứng minh callback hết lỗi 403; công cụ phân biệt URL khớp với callback được API xác nhận. Không tự retry mutation khi timeout.
+
+Các dòng status trong runtime chỉ ghi trạng thái không có credential. Nếu thao tác lỗi sau khi bắt đầu delete, báo Codex; giữ nguyên bản sao, không xóa hoặc chạy restore/switch lặp lại tùy tiện.
+
 Sự kiện nhóm thật → đối chiếu A/B/C và bot ID → parser/test → chủ dự án duyệt gửi một câu → nghiệm thu chống trùng/cooldown/ON-OFF gửi → Railway một instance và restart → Gemini. Không tự mở dịch vụ trả phí. Giữ Cloudflare dự phòng và cần xác nhận secret webhook cũ còn khả dụng trước khi chuyển; getWebhookInfo không đọc lại được secret đó.

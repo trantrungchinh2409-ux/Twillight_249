@@ -12,6 +12,7 @@ def package():
     files = [ROOT / name for name in
              ('README.md', 'requirements.txt', 'requirements-build.txt',
               'run_bot.py', '.gitignore', 'index.html', 'START_TEST.bat',
+              'SWITCH_TO_POLLING.bat', 'RESTORE_WEBHOOK.bat',
               'README_WINDOWS11.md', 'README_VI.md', 'DEPLOY_REPORT.md',
               'package.json', 'package-lock.json', 'tsconfig.json',
               'tsconfig.test.json', 'wrangler.jsonc', '.node-version',
