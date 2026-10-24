@@ -131,3 +131,4 @@ class OfficialAPI:
         result = self.transport.post('sendMessage', {'chat_id': chat_id, 'text': text}, timeout=15)
         if not isinstance(result.get('message_id'), str) or not result['message_id']:
             raise ProtocolError('Send acknowledgement missing message ID')
+        return result

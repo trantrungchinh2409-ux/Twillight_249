@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import sys
@@ -21,7 +22,8 @@ LABELS = {'A': 'mention_bot', 'B': 'reply_without_mention',
 KEYS = set(('event_name message from chat id display_name is_bot chat_type '
             'text message_id date mentions mention user_id bot_id offset length '
             'type reply_to_message reply_to quote quoted_message sender_id '
-            'target_id entities data photo caption sticker voice_url url').split())
+            'target_id entities data photo caption sticker voice_url url '
+            'message_type event_type interaction_type trigger_type is_mentioned is_reply').split())
 
 
 class ReadOnlyTransport:
@@ -87,12 +89,22 @@ class Redactor:
         if depth > 8:
             return '<depth_limit>'
         if isinstance(value, dict):
-            return {name if name in KEYS else 'unknown_field_'+str(index):
+            return {name if (name in KEYS or
+                            (key == 'message' and re.fullmatch(r'[a-z][a-z0-9_]{0,35}', name)))
+                    else 'unknown_field_'+str(index):
                     self.clean(item, name, depth+1)
                     for index, (name, item) in enumerate(list(value.items())[:60])}
         if isinstance(value, list):
             return [self.clean(item, key, depth+1) for item in value[:30]]
         if isinstance(value, str):
+            if depth == 2 and key not in KEYS:
+                return '<metadata_sha256_' + hashlib.sha256(value.encode()).hexdigest() + '>'
+            if key in ('message_type', 'event_type', 'interaction_type', 'trigger_type'):
+                # Preserve only closed enum words; no arbitrary metadata strings.
+                if value in ('TEXT', 'MENTION', 'REPLY', 'QUOTE', 'GROUP_MENTION',
+                             'text', 'mention', 'reply', 'quote', 'group_mention'):
+                    return value
+                return '<metadata_sha256_' + hashlib.sha256(value.encode()).hexdigest() + '>'
             if key == 'event_name' and value in EVENTS:
                 return value
             if key == 'chat_type' and value in ('GROUP', 'PRIVATE'):
@@ -107,7 +119,8 @@ class Redactor:
         return '<number>' if isinstance(value, (int, float)) else '<value>'
 
 
-def receive_one(transport, seconds=300, clock=time.monotonic, wait=time.sleep, output=print):
+def receive_one(transport, seconds=300, clock=time.monotonic, wait=time.sleep, output=print,
+                accept=None):
     deadline, errors = clock()+seconds, 0
     while clock() < deadline:
         try:
@@ -126,6 +139,9 @@ def receive_one(transport, seconds=300, clock=time.monotonic, wait=time.sleep, o
             continue
         errors = 0
         if valid_event(result):
+            if accept is not None and not accept(result):
+                wait(min(0.25, max(0, deadline-clock())))
+                continue
             return result
         if result not in ({}, None):
             output('Dữ liệu chưa khớp hợp đồng sự kiện; không coi là thành công.')

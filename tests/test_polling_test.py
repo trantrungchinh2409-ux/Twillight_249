@@ -28,6 +28,19 @@ class Fake:
 
 
 class PollingTests(unittest.TestCase):
+    def test_interaction_metadata_is_not_destroyed(self):
+        redactor = p.Redactor('bot-id')
+        cleaned = redactor.clean({'message_type': 'MENTION', 'text': 'private content'})
+        self.assertEqual(cleaned['message_type'], 'MENTION')
+        self.assertEqual(cleaned['text'], '<string>')
+        first = redactor.clean({'message_type': 'some-unverified-value'})
+        second = p.Redactor('bot-id').clean({'message_type': 'some-unverified-value'})
+        self.assertEqual(first, second)
+        self.assertNotIn('some-unverified-value', str(first))
+        extra = redactor.clean({'message': {'actual_field': 'private-value', 'text': 'secret'}})
+        self.assertIn('actual_field', extra['message'])
+        self.assertNotIn('private-value', str(extra))
+
     def test_webhook_blocks_poll_and_mutation_in_main(self):
         fake = Fake({'id': 'bot-id'}, {'url': 'https://private-webhook.example'})
         output = io.StringIO()
