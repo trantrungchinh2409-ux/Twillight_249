@@ -1,4 +1,6 @@
-# Bản hiện hành — JAT Design AI trên Windows 11
+# Bản hiện hành — API failover và ứng viên EXE Win7
+
+Bản portable Win7 chưa được nghiệm thu trên Win7 thật: xem [README_WIN7_VI.md](README_WIN7_VI.md). Nhánh nâng cấp jat-design/failover-win7-portable; nhánh API-vault cũ đã được chủ dự án xác nhận chạy thật, được giữ nguyên.
 
 Xem [hướng dẫn khóa API và hạn mức](README_API_LIMITS_VI.md). Mốc AI cũ đã chạy thật; bản nâng cấp dùng DPAPI và hạn mức bền 10 lượt/2 phút. Phần bên dưới là tài liệu V0.1 lịch sử, không phải hướng dẫn START_AI hiện tại.
 

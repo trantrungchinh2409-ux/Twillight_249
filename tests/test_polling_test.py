@@ -64,7 +64,8 @@ class PollingTests(unittest.TestCase):
     def test_webhook_blocks_poll_and_mutation_in_main(self):
         fake = Fake({'id': 'bot-id'}, {'url': 'https://private-webhook.example'})
         output = io.StringIO()
-        with patch.object(p.sys.stdin, 'isatty', return_value=True), \
+        with patch.object(p.sys, 'version_info', (3, 10, 0)), \
+             patch.object(p.sys.stdin, 'isatty', return_value=True), \
              patch.object(p.getpass, 'getpass', return_value='synthetic-not-a-token'), \
              patch.object(p, 'Transport', return_value=fake), \
              contextlib.redirect_stdout(output):

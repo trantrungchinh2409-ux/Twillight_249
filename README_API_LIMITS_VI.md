@@ -1,5 +1,7 @@
 # JAT Design — khóa Gemini và hạn mức trên Windows 11
 
+Bổ sung hiện tại: failover nhớ khóa đang dùng qua restart, CMD báo số khóa dự phòng sau khi tạo câu thành công; STATUS hiển thị khóa và dự phòng. Xem README_WIN7_VI.md cho portable, chuyển máy và giới hạn nghiệm thu Win7. Nhánh mới: jat-design/failover-win7-portable.
+
 ## Thao tác
 
 1. Đóng mọi cửa sổ bot/poller cũ. Giữ nguyên thư mục runtime và các database.

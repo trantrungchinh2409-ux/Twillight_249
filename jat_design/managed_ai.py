@@ -13,16 +13,22 @@ from .managed_limits import ManagedResponder
 from .official_api import APIError, OfficialAPI, Transport
 from .polling_test import TokenLock, ReadOnlyTransport, receive_one, webhook_enabled
 from .state import State
+from .safe_audit import record
+from .reconnect import read_with_reconnect, retryable, wait
 from .webhook_switch import RUNTIME, hidden
 
 
-def status_text(snapshot, provider_until=0, now=None):
+def status_text(snapshot, provider_until=0, now=None, key_status=None):
     now = time.time() if now is None else now
     local = max(0, snapshot.get('local_until', 0)-now)
     google = max(0, snapshot.get('google_until', 0)-now, provider_until-now)
     remaining = 0 if local else max(0, 10-sum(t > now-120 for t in snapshot.get('window_times', [])))
+    keys = key_status or {}
+    key_text = '; API đang chọn #%s (%s); dự phòng: %s' % (
+        keys.get('active', '?'), keys.get('active_status', 'not_checked'), ', '.join('#%s=%s' % (k['number'], k['status'])
+        for k in keys.get('keys', []) if not k['primary']) or 'không có')
     return 'STATUS — còn %s/10 lượt trong 2 phút; nghỉ nội bộ %ss; chờ Google %ss; khóa gửi chưa rõ: %s.' % (
-        remaining, int(local+0.999), int(google+0.999), snapshot.get('uncertain', False))
+        remaining, int(local+0.999), int(google+0.999), snapshot.get('uncertain', False))+key_text
 
 
 def keyboard(controls, status):
@@ -47,6 +53,8 @@ def main():
         prompt = args.prompt.read_text(encoding='utf-8-sig').strip()
         if not prompt or len(prompt) > 4000: raise ValueError('Invalid prompt')
         with TokenLock(VAULT_LOCK):
+            if (RUNTIME/'profile-import.pending').exists():
+                print('OFF — chuyển hồ sơ chưa hoàn tất. Giữ dữ liệu và báo Codex.'); return 4
             vault = Vault()
             if not vault.data['items']:
                 print('Chưa có khóa đã lưu. Đóng cửa sổ và mở SETUP_API.bat trước.'); return 2
@@ -57,8 +65,8 @@ def main():
             with TokenLock(token):
                 transport = Transport(token)
                 zalo = OfficialAPI(transport)
-                bot_id = zalo.getMe()
-                if webhook_enabled(ReadOnlyTransport(transport)):
+                bot_id = read_with_reconnect(zalo.getMe)
+                if read_with_reconnect(lambda: webhook_enabled(ReadOnlyTransport(transport))):
                     print('Webhook đang bật; dừng, không thay đổi.'); return 3
                 group_id = verified_group(RUNTIME, bot_id)
                 state = State(RUNTIME/'ai_reply.db')
@@ -70,12 +78,15 @@ def main():
                     with lock:
                         cache['snapshot'] = engine.status()
                         cache['provider_until'] = time.time()+pool.wait_remaining()
+                        cache['keys'] = pool.status()
                 def status():
-                    with lock: return status_text(cache['snapshot'], cache['provider_until'])
+                    with lock: return status_text(cache['snapshot'], cache['provider_until'], key_status=cache['keys'])
                 refresh()
+                record('start', active=pool.status()['active'])
                 print(status())
                 print('ON / OFF / STATUS / QUIT rồi Enter. Chỉ nhóm thử đã xác minh.')
                 threading.Thread(target=keyboard, args=(controls, status), daemon=True).start()
+                poll_failures = 0
                 while True:
                     refresh()
                     on, quit_now, armed = controls.snapshot()
@@ -83,15 +94,32 @@ def main():
                     if not on:
                         time.sleep(0.2); continue
                     errors = []
-                    event = receive_one(ReadOnlyTransport(transport), seconds=35, stop_on_error=True,
+                    def poll_output(message):
+                        if message.startswith('OFF — Dừng ở lỗi đầu tiên') and errors and retryable(errors[-1]):
+                            message = 'Kết thúc lượt đọc hiện tại; sẽ xét kết nối lại.'
+                        print(message, flush=True)
+                    event = receive_one(ReadOnlyTransport(transport), seconds=35, stop_on_error=True, output=poll_output,
                         on_status=lambda s: errors.append(s) if s.get('phase') == 'poll_error' else None)
-                    if errors: return 1
+                    if errors:
+                        detail = errors[-1]
+                        if not retryable(detail): return 1
+                        poll_failures += 1
+                        delay = 60 if detail.get('code') == 429 else min(60, 5*2**min(poll_failures-1, 4))
+                        record('poll_wait', kind=detail.get('kind'), code=detail.get('code'), seconds=delay)
+                        print('Chờ kết nối đọc lại %ss; không gửi lại tin.' % delay, flush=True)
+                        if not wait(delay, quit_now=lambda: controls.snapshot()[1]): return 0
+                        continue
+                    poll_failures = 0
                     if event is None: continue
                     active, quit_now, current_arm = controls.snapshot()
                     if quit_now or not active or current_arm != armed: continue
+                    old_active = pool.status()['active']
                     outcome = engine.handle(zalo, pool, event, active, armed,
                                             still_on=lambda: controls.snapshot()[0])
                     refresh()
+                    active_key = pool.status()['active']
+                    if old_active != active_key: record('key_switch', active=active_key)
+                    record('result', active=active_key, outcome=outcome)
                     report = {'at_utc': datetime.now(timezone.utc).isoformat(), 'outcome': outcome,
                               'remaining': cache['snapshot']['remaining'], 'model': pool.model,
                               'history_sent': False, 'maxOutputTokens': 128}
@@ -102,6 +130,9 @@ def main():
                     print('AI: '+outcome+' — '+status(), flush=True)
                     if outcome == 'uncertain_blocked':
                         print('OFF — gửi chưa rõ kết quả, không tự gửi lại.'); return 1
+                    if outcome == 'provider_error' and retryable(engine.last_error or {}):
+                        print('Lỗi mạng/provider tạm thời; giữ ON, không gửi lại câu hỏi cũ và không đổi khóa.')
+                        continue
                     if outcome in ('invalid_key', 'billing_problem', 'provider_error'):
                         print('OFF — kiểm tra khóa/thanh toán/kết nối trong CMD, không báo nạp tiền trong nhóm.'); return 1
     except KeyboardInterrupt:

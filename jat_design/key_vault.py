@@ -16,7 +16,9 @@ KEY_REASONS = {'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_REVOKED',
 
 
 def key_specific(error):
-    return isinstance(error, GeminiError) and error.code != 429 and (error.code == 401 or error.reason in KEY_REASONS)
+    return (isinstance(error, GeminiError) and error.code not in (402, 429)
+            and error.reason not in ('BILLING_DISABLED', 'BILLING_NOT_ACTIVE', 'PROJECT_BILLING_DISABLED')
+            and (error.code == 401 or error.reason in KEY_REASONS))
 
 
 def error_label(error):
@@ -30,7 +32,7 @@ def error_label(error):
 class Vault:
     def __init__(self, path=VAULT_PATH):
         self.path = Path(path)
-        self.data = {'version': 1, 'primary': None, 'items': [], 'wait_until': 0, 'quota_errors': 0}
+        self.data = {'version': 1, 'primary': None, 'items': [], 'wait_until': 0, 'quota_errors': 0, 'active': None}
         if self.path.exists():
             loaded = json.loads(protect(self.path.read_bytes(), decrypt=True).decode('utf-8'))
             if loaded.get('version') != 1 or not isinstance(loaded.get('items'), list):
@@ -71,12 +73,15 @@ class Vault:
 
     def remove(self, index):
         old = self.data['items'].pop(index)
+        if self.data.get('active') == old['id']: self.data['active'] = None
         if self.data['primary'] == old['id']:
             self.data['primary'] = self.data['items'][0]['id'] if self.data['items'] else None
         self.save()
 
     def primary(self, index):
-        self.data['primary'] = self.data['items'][index]['id']; self.save()
+        self.data['primary'] = self.data['items'][index]['id']
+        self.data['active'] = self.data['primary']
+        self.save()
 
     def ordered(self):
         return sorted(self.data['items'], key=lambda item: item['id'] != self.data['primary'])
@@ -102,15 +107,31 @@ class KeyPool:
     def __init__(self, vault, prompt, factory=Gemini, output=print):
         self.vault, self.prompt, self.factory, self.output = vault, prompt, factory, output
         self.model = PREFERRED[0]
+        self.active = vault.data.get('active') or vault.data['primary']
+        self.last_good = vault.data.get('last_good') or vault.data['primary']
 
     def wait_remaining(self): return self.vault.wait_remaining()
+
+    def status(self):
+        items = self.vault.data['items']
+        active = next((i for i, item in enumerate(items, 1) if item['id'] == self.active), None)
+        return {'active': active, 'active_status': items[active-1].get('status', 'not_checked') if active else 'none',
+                'keys': [{'number': i, 'primary': item['id'] == self.vault.data['primary'],
+                          'status': item.get('status', 'not_checked')}
+                         for i, item in enumerate(items, 1)]}
 
     def generate(self, question):
         remaining = self.wait_remaining()
         if remaining > 0:
             raise GeminiError('Provider waiting; no request made', 429, 'api', retry_after=remaining)
-        for item in self.vault.ordered():
+        ordered = self.vault.ordered()
+        ordered.sort(key=lambda item: item['id'] != self.active)
+        for item in ordered:
             if item.get('status') == 'invalid_key': continue
+            self.active = item['id']
+            if self.vault.data.get('active') != self.active:
+                self.vault.data['active'] = self.active
+                self.vault.save()
             client = self.factory(item['key'], self.prompt)
             client.model = self.model
             try:
@@ -122,10 +143,15 @@ class KeyPool:
                     self.vault.quota_wait(error)
                     raise  # No alternate key/account for quota.
                 if key_specific(error):
-                    self.output('Khóa chính/dự phòng có lỗi riêng của khóa; kiểm tra khóa dự phòng đã lưu.')
+                    self.output('Khóa có lỗi riêng đã xác định; kiểm tra khóa dự phòng đã lưu.')
                     continue
                 raise  # Billing, permissions, model, network: no key rotation.
+            self.vault.data['last_good'] = item['id']
             self.vault.mark(item, 'generation_verified')
+            if self.last_good != item['id'] and item['id'] != self.vault.data['primary']:
+                number = self.vault.data['items'].index(item)+1
+                self.output('Đã chuyển sang API dự phòng #%s' % number)
+            self.last_good = item['id']
             if self.vault.data.get('quota_errors', 0):
                 self.vault.data['quota_errors'] = 0; self.vault.save()
             return answer
