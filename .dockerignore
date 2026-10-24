@@ -1,0 +1,5 @@
+**
+!Dockerfile
+!jat_design/
+!jat_design/*.py
+!SYSTEM_PROMPT.txt
