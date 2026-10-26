@@ -98,7 +98,7 @@ def install_menu():
             print('Tac vu dung voi ma %s; du lieu runtime duoc giu nguyen.' % result)
 
 
-def main(argv=None):
+def _main(argv=None):
     parser = argparse.ArgumentParser(description='JAT Design: installed Python 3.8.10 x64, not EXE')
     modes = parser.add_mutually_exclusive_group()
     for option in ('check', 'install', 'setup', 'import-profile', 'export-profile', 'check-https'):
@@ -134,3 +134,9 @@ def main(argv=None):
     except Exception:
         print('OFF: khoi dong/tac vu khong thanh cong; giu runtime va bao Codex. Khong in secret.')
         return 1
+
+
+def main(argv=None):
+    from .win7_console import console_mode
+    with console_mode():
+        return _main(argv)

@@ -24,7 +24,7 @@ def main():
         if check.returncode:
             raise RuntimeError('Extracted-source offline check failed (code %s)' % check.returncode)
         env = os.environ.copy()
-        env.update(JAT_PYTHON=sys.executable, JAT_NO_PAUSE='1')
+        env.update(JAT_PYTHON=sys.executable, JAT_NO_PAUSE='1', JAT_ASCII_CONSOLE='1')
         bat = source/'START_WIN7_PYTHON.bat'
         # cmd /s /c requires a wrapping quote pair in addition to the quoted path.
         result = subprocess.run('"%s" /d /s /c ""%s""' % (env.get('COMSPEC', 'cmd.exe'), bat),

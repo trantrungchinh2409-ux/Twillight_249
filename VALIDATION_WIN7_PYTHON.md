@@ -32,3 +32,11 @@ SHA-256: bbfdb47947ebc24285af0f6ba66d9dcb213d982690aac70bd0641e5ad6906903.
 File tải trên GitHub được đọc lại kiểm byte/hash, không chỉ kiểm file tại workspace. Bản ZIP giữ nguyên sau CI; mục báo cáo này bổ sung sau khi CI hoàn tất, không sửa source runtime đã test hoặc thay artifact.
 
 Đã đối chiếu nhánh nguồn failover và stable-ai/stable-auto/stable-live sau push: giữ đúng SHA trước khi làm. Chỉ push nhánh jat-design/win7-python38-launchers-20261026. Không thay đổi Cloudflare, webhook, bí mật hoặc dữ liệu thật.
+
+## Hotfix console Windows 7 sau phản hồi thực tế
+
+Người dùng đã xác nhận SQLite 3.35.5, Python 3.8.10 x64, DPAPI/mutex/TLS/source qua preflight trên Win7 thật. Chọn mục 1 lỗi ở setup_api.py:51 (print banner Unicode trước khi đọc key), log cuối bị cắt, kết quả process 120. 120 phù hợp lỗi flush stdio lúc thoát nhưng log thiếu exception cuối nên chưa kết luận chính xác WinError trên máy đích.
+
+Thêm win7_console.py trong launcher source: chỉ chuyển hiển thị stdout/stderr và prompt input/getpass sang ASCII trên Win7; không chuyển đổi giá trị input/key/nội dung ứng dụng. Wrapper giữ isatty/fileno và bảo vệ no-echo của getpass. Không thay code vault, DPAPI, API, hạn mức hoặc DB; không đổi cấu hình console hệ thống. Windows mới giữ hiển thị Unicode, có JAT_ASCII_CONSOLE=1 cho kiểm thử ép nhánh tương thích.
+
+Tái hiện hồi quy với console mô phỏng từ chối Unicode: banner gốc đúng dòng 51 ném OSError, banner qua adapter đạt. Test xác nhận prompt ASCII nhưng secret/đường dẫn Unicode trả nguyên vẹn, GetPassWarning vẫn chặn fallback hiện key và phục hồi stream/input sau lỗi. Verifier ZIP Windows ép nhánh ASCII cho START BAT. Đây không thay thế chạy lại menu 1 trên Win7 thật; không tuyên bố đã nghiệm thu lỗi người dùng trước khi họ chạy bản sửa.

@@ -29,3 +29,9 @@ Khóa màn hình không chủ động dừng Python; máy vẫn phải thức v�
 ## Mức kiểm chứng
 
 Xem VALIDATION_WIN7_PYTHON.md. Không có máy Windows 7 tại môi trường Codex; kiểm tra Windows CI mới hơn không thay thế nghiệm thu Windows 7 SP1 tại công ty. Sau kiểm tra offline, cần một lần chạy thực trên máy của bạn để xác nhận DPAPI, SQLite, TLS/mạng công ty và Zalo/Gemini thật. Không nhập token/key vào GitHub hoặc chat.
+
+## Bản sửa console khi chọn mục 1 bị thoát (mã 120)
+
+Launcher mới tự bật hiển thị ASCII/không dấu trên Windows 7. Chỉ đổi cách hiển thị thông báo và prompt CMD; không đổi dữ liệu nhập, API key, đường dẫn, prompt Gemini, nội dung Zalo hoặc dữ liệu DPAPI. Nhập key vẫn dùng getpass, không cho rơi về chế độ hiện key. Không cần đổi registry, font, chứng chỉ hoặc cài lại Python.
+
+Đóng CMD bot/cài đặt cũ. Giải nén bản cập nhật đè file chương trình trong **cùng thư mục hiện tại**, giữ nguyên runtime, rồi chạy lại INSTALL_WIN7.bat → 1. ZIP không chứa runtime nên không ghi đè kho/DB. Nếu vẫn lỗi, chỉ gửi các dòng báo lỗi kỹ thuật; không gửi key/token hoặc file runtime.
