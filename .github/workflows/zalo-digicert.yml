@@ -1,0 +1,67 @@
+name: Official DigiCert Win7 bundle
+on:
+  workflow_dispatch:
+  push:
+    branches: ['jat-design/win7-python38-launchers-20261026']
+    paths: ['digicert_bundle.py', 'check_zalo_digicert.py', 'CHECK_ZALO_DIGICERT_WIN7.bat', 'README_ZALO_DIGICERT_VI.md', 'scripts/fetch_digicert_bundle.py', 'scripts/package_digicert_check.py', 'tests/test_digicert_bundle.py', '.github/workflows/zalo-digicert.yml']
+permissions:
+  contents: write
+concurrency:
+  group: jat-official-digicert-bundle
+  cancel-in-progress: false
+jobs:
+  official-ca:
+    if: github.ref == 'refs/heads/jat-design/win7-python38-launchers-20261026'
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.8.10'
+          architecture: x64
+      - name: Fetch official HTTPS, pin root, verify public CA signatures
+        shell: pwsh
+        run: |
+          python scripts/fetch_digicert_bundle.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:PYTHONPATH='tests'
+          python -m unittest test_digicert_bundle -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python check_zalo_digicert.py --verify-files
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/package_digicert_check.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Real verified HTTPS with isolated CA bundle (no credentials)
+        shell: pwsh
+        run: |
+          $lines = & python check_zalo_digicert.py
+          $probeExit = $LASTEXITCODE
+          $lines | ForEach-Object { Write-Host $_ }
+          $lines | Set-Content -Encoding utf8 ca_digicert/NETWORK_TEST.txt
+          "Real TLS diagnostic exit: $probeExit (runner network; not Win7 company acceptance)" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          if ($probeExit -notin @(0,1,2)) { exit $probeExit }
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JAT-Zalo-DigiCert-Win7
+          if-no-files-found: error
+          path: |
+            downloads/JAT-Zalo-DigiCert-Win7.zip
+            downloads/JAT-Zalo-DigiCert-Win7.zip.sha256
+            ca_digicert/SOURCE.json
+            ca_digicert/NETWORK_TEST.txt
+      - name: Publish verified public bundle only to development branch
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -ne 'refs/heads/jat-design/win7-python38-launchers-20261026') { throw 'Ref not allowed' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ca_digicert/DigiCertGlobalRootG3.pem ca_digicert/RapidSSLTLSECCCAG1.pem ca_digicert/zalo-digicert-bundle.pem ca_digicert/SOURCE.json ca_digicert/NETWORK_TEST.txt
+          git add -f downloads/JAT-Zalo-DigiCert-Win7.zip downloads/JAT-Zalo-DigiCert-Win7.zip.sha256
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m 'Publish verified official DigiCert public bundle [skip ci]'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:refs/heads/jat-design/win7-python38-launchers-20261026
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
