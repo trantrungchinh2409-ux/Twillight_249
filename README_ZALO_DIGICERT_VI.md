@@ -1,12 +1,22 @@
 # Win7 Zalo — DigiCert Global Root G3 + RapidSSL TLS ECC CA G1
 
-Bộ kiểm tra độc lập, không cần token/key, không chạy bot và không sửa Windows Certificate Store hoặc source Windows11. CA được job build tải qua HTTPS từ DigiCert chính thức, không lấy từ kết nối lỗi hay trang sao chép. Root bắt buộc có SHA256:
+Bộ kiểm tra độc lập, không cần token/key, không chạy bot và không sửa Windows Certificate Store hoặc source Windows11. ZIP này **không đóng sẵn chứng chỉ**. Lần chạy đầu, Python tải CA qua HTTPS có xác minh từ DigiCert chính thức. Nếu không tải hoặc xác minh được, công cụ dừng FAIL; không lấy CA từ kết nối lỗi hay trang sao chép. Root bắt buộc có SHA256:
 
 31AD6648F8104138C738F39EA4320133393E3A18CC02296EF97C2AC9EF6731D0
 
 ## Cách chạy
 
 Giải nén **toàn bộ ZIP vào thư mục riêng**, nhấp **CHECK_ZALO_DIGICERT_WIN7.bat**. Dùng Python 3.8.10 x64 đã cài; không cài pip, EXE, DLL hoặc CA. Nếu không tự tìm thấy Python, nhập đường dẫn python.exe, không phải token.
+
+CA được lưu riêng trong thư mục `ca_digicert` cạnh BAT, không cài vào Windows. Cần quyền ghi thư mục đã giải nén. Không giải nén vào thư mục bot đang chạy. Khi có SOURCE.json, công cụ dùng lại file nhưng kiểm pin/chữ ký mỗi lần; nếu file hỏng sẽ FAIL, không tự tin file hỏng.
+
+Nguồn tải đầu tiên:
+- Root: https://cacerts.digicert.com/DigiCertGlobalRootG3.crt
+- Intermediate: https://cacerts.digicert.com/RapidSSLTLSECCCAG1.crt
+
+Nếu intermediate không hợp lệ/không tải được, công cụ chỉ tra hai trang danh mục HTTPS chính thức của DigiCert để tìm liên kết `cacerts.digicert.com`; chỉ chấp nhận đúng subject, issuer, thời hạn và chữ ký. Giới hạn dung lượng, timeout và số liên kết; không chuyển HTTP hoặc mirror. Fingerprint root được chốt trước, không lấy fingerprint từ file vừa tải để tự tin nó.
+
+Nếu Win7 không xác minh được HTTPS của chính DigiCert, công cụ dừng. Không thể dùng CA chưa tải/xác minh để tự sửa kết nối tải chính nó. Gửi mã category/certificate_code cho IT; không tắt SSL hoặc nhập CA lạ.
 
 Các phép kiểm:
 1. Đọc root và intermediate công khai trong ca_digicert; kiểm root pin, intermediate hash/subject/issuer, thời hạn và chữ ký root tự ký/intermediate do root cấp bằng Windows CryptoAPI trong bộ nhớ. Không dựa tên file để tin cậy CA. SOURCE.json ghi URL DigiCert chính thức, hash và metadata.
@@ -36,3 +46,11 @@ Chữ ký root/intermediate được kiểm offline. TLS thật kiểm toàn đ�
 Không cần đổi code nhận/gửi, Gemini, DPAPI, DB hoặc hạn mức. Phương án tối thiểu là launcher riêng đặt SSL_CERT_FILE trỏ bundle đã xác minh trong setlocal của CMD rồi gọi START_WIN7_PYTHON.bat hiện có; không setx, không import CA Windows, không thay Python toàn máy. CPython3.8 tạo default context sẽ nạp Windows CA phù hợp server-auth và CA file này. Chỉ triển khai launcher đó sau khi xem báo cáo PASS tại máy công ty và được người dùng duyệt dùng CA bundle; bản kiểm tra hiện tại **không** tự chạy hoặc sửa bot.
 
 Nếu private bundle vẫn FAIL thì dừng tích hợp, chẩn đoán đúng lỗi còn lại. Không build lại EXE hoặc sửa logic bot đang chạy trên Windows11.
+
+## Tình trạng bàn giao 26/10/2026 — không chạy lại CI
+
+Lần CI cuối: https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40297807016/job/121488041263
+
+Step 4 có tên gộp “Fetch official HTTPS, pin root, verify public CA signatures”, exit 1. BUILD_STATUS.json ghi `stage=tests`: lệnh tải và xác minh CA đã exit 0, lỗi phát sinh tại `python -m unittest test_digicert_bundle -v`, không có URL tải nào được chứng minh là lỗi trong lần này. Log chi tiết yêu cầu đăng nhập GitHub; chưa xác định test/traceback cụ thể. Không kết luận DigiCert chặn tải hay tự retry CI. Bản ZIP này được tạo cục bộ từ mã kiểm tra, không phụ thuộc CI hay chứng chỉ đã đóng gói.
+
+Các bài unit test độc lập chạy được trên Linux được ghi tại VALIDATION_WIN7_PYTHON.md trên GitHub; test mock chỉ kiểm hành vi fail-closed, không chứng minh TLS thật. Chưa chạy BAT/CryptoAPI trên máy Win7 công ty, chưa kiểm chain live/CRL/OCSP ở đó. Chỉ kết quả thực tế khi chạy BAT mới quyết định PASS/FAIL cho máy này.

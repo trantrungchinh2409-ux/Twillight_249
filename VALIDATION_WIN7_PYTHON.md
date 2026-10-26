@@ -82,3 +82,22 @@ Người dùng báo Zalo DNS PASS, TLS code19, issuer RapidSSL TLS ECC CA G1 và
 DigiCert HTTPS bị proxy Codex từ chối CONNECT403; không dùng mirror/insecure TLS. Thêm workflow Windows riêng tải CA công khai trực tiếp từ DigiCert HTTPS, bắt buộc root hash khớp, subject/issuer/time đúng, root self-signature và intermediate signature được Windows CryptoAPI xác minh trong bộ nhớ. Không cài CA. Nếu không xác minh được thì không đóng gói. Chỉ job này được publish CA/ZIP công khai tới đúng nhánh phát triển; không sửa stable/source bot. GitHub artifact cũng được lưu.
 
 Kit chạy default/root-only/root+intermediate với context riêng explicit CA; giữ CERT_REQUIRED, hostname/SNI và không partial-chain. Sau full bundle PASS mới thử default Python context với SSL_CERT_FILE chỉ trong tiến trình chẩn đoán và phục hồi biến cũ, kiểm Zalo và Google. Không chạy bot/key vault/DB. Revocation chưa được kiểm bởi OpenSSL mặc định; phải báo NOT_CHECKED, không tuyên bố CRL/OCSP PASS và không tắt revocation Windows. Chỉ đề xuất launcher CA process-only sau khi máy Win7 thực trả PASS; chưa thay bot Windows11.
+
+
+## Bàn giao độc lập, dừng CI — 26/10/2026
+
+Theo yêu cầu mới, không sửa hoặc chạy lại workflow để cố hoàn thiện đóng gói CA. Bản ZIP `downloads/JAT-Zalo-DigiCert-Win7.zip` được tạo cục bộ, không kèm CA, bot, DB, DLL, EXE hoặc key; chỉ có BAT/Python, downloader DigiCert, README và manifest.
+
+CI cuối đã hoàn tất trước yêu cầu dừng: https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40297807016/job/121488041263 . Step4 tên gộp “Fetch official HTTPS, pin root, verify public CA signatures” exit1; metadata công khai `ca_digicert/BUILD_STATUS.json` ghi `stage=tests`. Theo thứ tự lệnh và điều kiện exit trong workflow, tải CA/pin/chữ ký đã exit0, sau đó `python -m unittest test_digicert_bundle -v` exit1. Không có bằng chứng URL tải thất bại trong lần này. Log chi tiết endpoint `/commit/149f191d7238a63f8a969101e7f489af5d064afe/checks/121488041263/logs/4` trả HTTP404 khi truy cập công khai; giao diện yêu cầu đăng nhập. Chưa biết test/traceback gây lỗi; không suy đoán nguyên nhân sâu hơn và không retry CI.
+
+Nguồn tải được code giới hạn: `https://cacerts.digicert.com/DigiCertGlobalRootG3.crt`, `https://cacerts.digicert.com/RapidSSLTLSECCCAG1.crt`, hoặc intermediate từ danh mục DigiCert chính thức. Root pin SHA256 bất biến; intermediate phải đúng issuer/subject/thời hạn và có chữ ký xác minh bằng root đã pin. Tải qua HTTPS với default verification; không chuyển HTTP, không disable SSL/hostname, không import Windows Store. Tải hoặc xác minh thất bại dừng trước TLS test. Không đóng sẵn các file CA chưa lấy được về workspace.
+
+Kiểm thử bản bàn giao trên Linux:
+- `PYTHONPATH=tests python3 -m unittest test_digicert_bundle test_zalo_tls_standalone test_zalo_cert_check test_https_probe -v`: 27 test, 25 đạt, 2 bỏ qua vì yêu cầu Windows/native CA.
+- CRC và từng hash trong manifest ZIP: PASS; không có bot/CA/EXE/DLL/DB trong ZIP.
+- Giải nén vào đường dẫn có dấu cách và `!`, chạy `--verify-files` khi chưa có CA: dừng FAIL đúng thiết kế, exit1, không traceback/secret.
+- Parse mọi Python trong ZIP theo cú pháp Python3.8: PASS. BAT ASCII, CRLF, labels duy nhất; chưa chạy CMD thật trên Win7.
+- Lần thử toàn suite trước bàn giao trên Linux: 167 test, 1 failure, 22 errors, 4 skipped; phần lỗi chủ yếu phụ thuộc Windows DPAPI và encrypted backup. Không tuyên bố toàn suite đạt và không sửa bot để né lỗi môi trường.
+- So sánh module nhận/gửi, Gemini, key vault, limits, state, failover/profile và SYSTEM_PROMPT với nguồn `61a1a3d`: không thay đổi.
+
+Chưa kiểm chứng trên Win7 công ty: tải DigiCert qua mạng thực, Windows CryptoAPI ECDSA, chain/hostname TLS Zalo và CRL/OCSP. Mock test không phải bằng chứng TLS thật. Cần chạy BAT trên máy đích để nhận PASS/FAIL; không cần token/key và không tự chạy bot. Commit bàn giao dùng `[skip ci]`, không dispatch hay chạy lại Actions.

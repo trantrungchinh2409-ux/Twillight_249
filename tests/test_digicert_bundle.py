@@ -7,6 +7,7 @@ from unittest.mock import patch
 import digicert_bundle as bundle
 import check_zalo_digicert as checker
 from scripts.fetch_digicert_bundle import validate_url
+from scripts import fetch_digicert_bundle as fetcher
 
 
 class DigiCertBundleTests(unittest.TestCase):
@@ -59,7 +60,22 @@ class DigiCertBundleTests(unittest.TestCase):
             with self.assertRaises(OSError):checker.integration_check(Path('public-ca.pem'))
             self.assertEqual(os.environ['SSL_CERT_FILE'],'original-private-path')
 
-    @unittest.skipUnless(os.name=='nt' and (bundle.CA_DIR/'SOURCE.json').exists(),'Official bundle/native Windows build required')
+    def test_downloaded_wrong_root_stops_before_intermediate_or_file_writes(self):
+        with patch.object(fetcher, 'download', return_value=b'0untrusted') as download, patch.object(fetcher, 'validate_public_cas') as verify:
+            with self.assertRaisesRegex(ValueError, 'root_sha256_mismatch'):
+                fetcher.main()
+        self.assertEqual(download.call_count, 1)
+        verify.assert_not_called()
+
+    def test_build_failure_report_contains_safe_codes_not_exception_text(self):
+        fetcher.EVENTS.clear()
+        with patch.object(fetcher, 'CURRENT_URL', bundle.ROOT_URL):
+            fetcher.record(urllib.error.URLError('private-company-user:secret-password'))
+        self.assertNotIn('secret-password', str(fetcher.EVENTS))
+        self.assertEqual(fetcher.EVENTS[-1]['official_url'], bundle.ROOT_URL)
+        fetcher.EVENTS.clear()
+
+    @unittest.skipUnless(os.name=='nt'  and (bundle.CA_DIR/'SOURCE.json').exists(),'Official bundle/native Windows build required')
     def test_official_bundle_real_pins_native_signatures_and_dates(self):
         root_pem,combined,meta=checker.verified_files()
         self.assertEqual(bundle.sha256(bundle.certificate_der(root_pem.encode('ascii'))),bundle.ROOT_SHA256)

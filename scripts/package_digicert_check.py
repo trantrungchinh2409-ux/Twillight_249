@@ -1,4 +1,4 @@
-"""Bundle only verified public DigiCert certificates and isolated diagnostics."""
+"""Package standalone downloader/diagnostic only: no CA prebundled, no bot/runtime."""
 from pathlib import Path
 import hashlib
 import json
@@ -6,15 +6,12 @@ import zipfile
 import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from check_zalo_digicert import verified_files
 FILES=('CHECK_ZALO_DIGICERT_WIN7.bat','check_zalo_digicert.py','digicert_bundle.py',
        'check_zalo_tls.py','README_ZALO_DIGICERT_VI.md','scripts/find_python38.bat',
-       'ca_digicert/DigiCertGlobalRootG3.pem','ca_digicert/RapidSSLTLSECCCAG1.pem',
-       'ca_digicert/zalo-digicert-bundle.pem','ca_digicert/SOURCE.json')
+       'scripts/fetch_digicert_bundle.py')
 
 
 def package():
-    verified_files()
     out=ROOT/'downloads'/'JAT-Zalo-DigiCert-Win7.zip';out.parent.mkdir(exist_ok=True)
     hashes={}
     with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:

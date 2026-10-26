@@ -14,10 +14,14 @@ from digicert_bundle import ROOT_URL, ROOT_SHA256, ROOT_CN, INTERMEDIATE_CN, cer
 
 EVENTS = []
 STAGE = 'root_download'
+CURRENT_URL = ROOT_URL
 
 
 def record(error):
-    safe = {'stage': STAGE, 'type': type(error).__name__}
+    safe = {'stage': STAGE, 'type': type(error).__name__, 'official_url': CURRENT_URL}
+    from check_zalo_tls import classify
+    category, fields = classify(error)
+    safe.update(category=category, **fields)
     if isinstance(error, urllib.error.HTTPError):
         safe['http_status'] = error.code
     known = {'root_sha256_mismatch', 'root_identity_mismatch', 'intermediate_identity_mismatch',
@@ -45,7 +49,9 @@ def validate_url(url):
 
 
 def download(url, limit=65536):
+    global CURRENT_URL
     validate_url(url)
+    CURRENT_URL = url
     opener = urllib.request.build_opener(OfficialRedirect())
     with opener.open(url, timeout=30) as r:
         validate_url(r.url)
@@ -70,6 +76,7 @@ def main():
     root = certificate_der(download(ROOT_URL))
     if sha256(root) != ROOT_SHA256:
         raise ValueError('root_sha256_mismatch')
+    print('ROOT_DOWNLOAD=PASS ROOT_SHA256=PASS')
     # Official-host candidates are accepted only after subject/issuer/signature validation.
     candidates = ['https://cacerts.digicert.com/RapidSSLTLSECCCAG1.crt']
     pages = ['https://www.digicert.com/kb/digicert-root-certificates.htm',
@@ -131,5 +138,6 @@ if __name__ == '__main__':
         record(error)
         folder = ROOT/'ca_digicert'; folder.mkdir(exist_ok=True)
         (folder/'BUILD_STATUS.json').write_text(json.dumps({'status':'FAIL', 'events':EVENTS}, indent=2)+'\n', encoding='utf-8')
-        print('OFFICIAL_BUNDLE=FAIL; see safe BUILD_STATUS.json')
+        print('OFFICIAL_BUNDLE=FAIL '+json.dumps(EVENTS[-1], sort_keys=True))
+        print('Safe details: ca_digicert/BUILD_STATUS.json. No trust settings changed.')
         raise SystemExit(1)

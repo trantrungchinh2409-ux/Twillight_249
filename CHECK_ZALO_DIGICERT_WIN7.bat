@@ -12,8 +12,18 @@ if not defined JAT_PYTHON goto :failed
 call "%~dp0scripts\find_python38.bat"
 if errorlevel 1 goto :failed
 :run
+echo JAT TLS diagnostic only. No bot, token or Windows trust changes.
+if exist "%~dp0ca_digicert\SOURCE.json" goto :check
+echo Downloading public CA from official DigiCert HTTPS. Verification stays ON.
+"%JAT_PYTHON%" -X utf8 -B "%~dp0scripts\fetch_digicert_bundle.py"
+if errorlevel 1 goto :download_failed
+:check
 "%JAT_PYTHON%" -X utf8 -B "%~dp0check_zalo_digicert.py"
 set "JAT_EXIT=%errorlevel%"
+goto :done
+:download_failed
+set "JAT_EXIT=1"
+echo FAIL: official CA download or verification. See codes above and ca_digicert\BUILD_STATUS.json.
 goto :done
 :failed
 set "JAT_EXIT=20"
