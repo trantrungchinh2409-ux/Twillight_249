@@ -6,10 +6,28 @@ import ssl
 import sys
 import urllib.parse
 import urllib.request
+import urllib.error
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from digicert_bundle import ROOT_URL, ROOT_SHA256, ROOT_CN, INTERMEDIATE_CN, certificate_der, describe, sha256, validate_public_cas
+
+EVENTS = []
+STAGE = 'root_download'
+
+
+def record(error):
+    safe = {'stage': STAGE, 'type': type(error).__name__}
+    if isinstance(error, urllib.error.HTTPError):
+        safe['http_status'] = error.code
+    known = {'root_sha256_mismatch', 'root_identity_mismatch', 'intermediate_identity_mismatch',
+        'ca_time_invalid_check_clock', 'root_signature_failed_or_crypto_unsupported',
+        'intermediate_signature_failed_or_crypto_unsupported', 'official_intermediate_not_verified',
+        'certificate_decode_failed', 'certificate_format_invalid', 'download_limit'}
+    if str(error) in known:
+        safe['code'] = str(error)
+    EVENTS.append(safe)
+
 
 HOSTS = {'cacerts.digicert.com', 'www.digicert.com', 'knowledge.digicert.com'}
 
@@ -48,6 +66,7 @@ class Links(HTMLParser):
 
 
 def main():
+    global STAGE
     root = certificate_der(download(ROOT_URL))
     if sha256(root) != ROOT_SHA256:
         raise ValueError('root_sha256_mismatch')
@@ -56,15 +75,18 @@ def main():
     pages = ['https://www.digicert.com/kb/digicert-root-certificates.htm',
              'https://www.digicert.com/kb/digicert-intermediate-certificates.htm']
     found, source, descriptions = None, None, None
+    STAGE = 'intermediate_candidate'
     for url in candidates:
         try:
             data = certificate_der(download(url))
             descriptions = validate_public_cas(root, data)
             found, source = data, url
             break
-        except Exception:
+        except Exception as error:
+            record(error)
             print('Official intermediate candidate not accepted; trying official catalog.')
     if found is None:
+        STAGE = 'official_catalog'
         for page in pages:
             try:
                 parser = Links(); parser.feed(download(page, 2_000_000).decode('utf-8', errors='replace'))
@@ -73,16 +95,18 @@ def main():
                     url = urllib.parse.quote(url, safe=':/%?=&')
                     if urllib.parse.urlsplit(url).hostname == 'cacerts.digicert.com':
                         candidates.append(url)
-            except Exception:
+            except Exception as error:
+                record(error)
                 print('Official catalog unavailable; no verification disabled.')
+        STAGE = 'catalog_certificate'
         for url in list(dict.fromkeys(candidates))[1:21]:
             try:
                 data = certificate_der(download(url))
                 descriptions = validate_public_cas(root, data)
                 found, source = data, url
                 break
-            except Exception:
-                pass
+            except Exception as error:
+                record(error)
     if found is None:
         raise ValueError('official_intermediate_not_verified')
     folder = ROOT/'ca_digicert'; folder.mkdir(exist_ok=True)
@@ -101,4 +125,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as error:
+        record(error)
+        folder = ROOT/'ca_digicert'; folder.mkdir(exist_ok=True)
+        (folder/'BUILD_STATUS.json').write_text(json.dumps({'status':'FAIL', 'events':EVENTS}, indent=2)+'\n', encoding='utf-8')
+        print('OFFICIAL_BUNDLE=FAIL; see safe BUILD_STATUS.json')
+        raise SystemExit(1)

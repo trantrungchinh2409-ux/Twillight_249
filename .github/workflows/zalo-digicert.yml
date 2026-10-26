@@ -65,3 +65,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           git push origin HEAD:refs/heads/jat-design/win7-python38-launchers-20261026
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish safe build failure codes only
+        if: failure()
+        shell: pwsh
+        run: |
+          if (!(Test-Path ca_digicert/BUILD_STATUS.json)) { exit 0 }
+          if ($env:GITHUB_REF -ne 'refs/heads/jat-design/win7-python38-launchers-20261026') { throw 'Ref not allowed' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ca_digicert/BUILD_STATUS.json
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          git commit -m 'Record safe official CA build failure codes [skip ci]'
+          git push origin HEAD:refs/heads/jat-design/win7-python38-launchers-20261026
