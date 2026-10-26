@@ -2,6 +2,7 @@
 setlocal DisableDelayedExpansion
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
+set "JAT_ZALO_CA_FILE=%~dp0certs\DigiCertGlobalRootG3.pem"
 chcp 65001 >nul
 cd /d "%~dp0"
 call "%~dp0scripts\find_python38.bat"

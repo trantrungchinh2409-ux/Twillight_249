@@ -12,7 +12,8 @@ def inputs(root=ROOT):
     names = ['INSTALL_WIN7.bat', 'START_WIN7_PYTHON.bat', 'run_win7_python.py',
              'digicert_bundle.py', 'check_zalo_digicert.py', 'run_portable.py', 'check_zalo_tls.py', 'zalo_cert_check.py', 'inspect_zalo_windows_chain.ps1', 'SYSTEM_PROMPT.txt', 'requirements.txt',
              'README_WIN7_PYTHON_VI.md', 'VALIDATION_WIN7_PYTHON.md',
-             'scripts/find_python38.bat', 'scripts/package_win7_python.py', 'scripts/verify_win7_python_release.py']
+             'certs/DigiCertGlobalRootG3.pem', 'certs/PROVENANCE.json', 'README_WIN7_ZALO_TLS_VI.md', 'VALIDATION_WIN7_ZALO_TLS.md',
+             'scripts/fetch_digicert_bundle.py', 'scripts/find_python38.bat', 'scripts/package_win7_python.py', 'scripts/verify_win7_python_release.py']
     files = [root/name for name in names]
     files += list((root/'jat_design').glob('*.py'))
     files += list((root/'tests').glob('*.py'))

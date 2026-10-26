@@ -51,12 +51,18 @@ def check_https(output=print, opener=None):
     if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
         output('HTTPS: TLS verification unavailable; no request made.')
         return 1
-    opener = opener or urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=context))
+    default_opener = opener or urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=context))
     output('TLS diagnostic v2; verification ON; no credentials or messages.')
     failures = 0
     for name, url in TARGETS:
         try:
-            with opener.open(url, timeout=20) as response:
+            selected_opener = default_opener
+            if name == 'Zalo' and opener is None:
+                from .zalo_tls import configured_context
+                zalo_context = configured_context()
+                if zalo_context is not None:
+                    selected_opener = urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=zalo_context))
+            with selected_opener.open(url, timeout=20) as response:
                 code = response.status
             output('%s: HTTPS certificate validation passed, HTTP %s' % (name, code))
         except urllib.error.HTTPError as error:

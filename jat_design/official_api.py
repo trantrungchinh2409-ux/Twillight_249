@@ -45,7 +45,13 @@ class Transport:
         if not isinstance(token, str) or not token.strip() or token != token.strip():
             raise ValueError('A nonempty bot token is required')
         self._token = token
-        self._opener = opener or urllib.request.build_opener(NoRedirect())
+        if opener is not None:
+            self._opener = opener
+        else:
+            from .zalo_tls import configured_context
+            context = configured_context()
+            self._opener = (urllib.request.build_opener(NoRedirect(), urllib.request.HTTPSHandler(context=context))
+                            if context is not None else urllib.request.build_opener(NoRedirect()))
 
     def post(self, method, payload, timeout):
         if method not in ('getMe', 'getUpdates', 'sendMessage', 'getWebhookInfo',

@@ -1,0 +1,17 @@
+{
+  "root_sha256_der": "31AD6648F8104138C738F39EA4320133393E3A18CC02296EF97C2AC9EF6731D0",
+  "official_reference_url": "https://cacerts.digicert.com/DigiCertGlobalRootG3.crt",
+  "acquired_from": "Existing trusted CA store of execution environment; exact DER fingerprint matches user-verified official root. No fresh DigiCert download claimed.",
+  "root": {
+    "subject_cn": "DigiCert Global Root G3",
+    "issuer_cn": "DigiCert Global Root G3",
+    "not_before": "Aug  1 12:00:00 2013 GMT",
+    "not_after": "Jan 15 12:00:00 2038 GMT",
+    "ocsp": [],
+    "crl": []
+  },
+  "self_signature_verification": "openssl verify -x509_strict -check_ss_sig -no-CApath -no-CAstore -CAfile certs/DigiCertGlobalRootG3.pem certs/DigiCertGlobalRootG3.pem: OK",
+  "intermediate_included": false,
+  "basis": "User confirmed T2 root-only PASS and T3 PASS on Win7 Python3.8.10",
+  "revocation_checked": false
+}

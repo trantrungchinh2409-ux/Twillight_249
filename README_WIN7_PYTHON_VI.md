@@ -1,5 +1,7 @@
 # JAT Design — chạy bằng Python 3.8 trên Windows 7
 
+**Bản tích hợp TLS Zalo root G3:** đọc [README_WIN7_ZALO_TLS_VI.md](README_WIN7_ZALO_TLS_VI.md). Root đã đóng sẵn, chỉ áp dụng cho Zalo qua hai BAT, không tải CA hoặc sửa Windows Store. Gemini giữ trust mặc định.
+
 Tiếp tục source `jat-design/failover-win7-portable` tại `61a1a3d`, không dùng EXE cũ. Cần **Python 3.8.10 x64 đầy đủ** đã cài trên Windows 7 Professional SP1 x64. Không dùng Python embeddable thiếu module. SQLite cần là module trong Python (`sqlite3`/`_sqlite3`), không chỉ chương trình sqlite3.exe bên ngoài.
 
 ## Cách chạy bằng chuột

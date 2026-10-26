@@ -50,6 +50,9 @@ def check(output=print):
         context = ssl.create_default_context()
         if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
             raise ValueError('TLS verification required')
+        from .zalo_tls import configured_context
+        if configured_context() is not None:
+            output('OK: Zalo-only root G3 pin/CA/time/hostname verification. No CA download.')
         from .webhook_switch import protect
         sample = b'JAT-offline-DPAPI-probe'
         if protect(protect(sample), decrypt=True) != sample:
