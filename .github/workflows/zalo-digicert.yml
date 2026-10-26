@@ -23,15 +23,21 @@ jobs:
       - name: Fetch official HTTPS, pin root, verify public CA signatures
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force ca_digicert | Out-Null
+          '{"status":"INCOMPLETE","stage":"fetch"}' | Set-Content ca_digicert/BUILD_STATUS.json
           python scripts/fetch_digicert_bundle.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          '{"status":"INCOMPLETE","stage":"tests"}' | Set-Content ca_digicert/BUILD_STATUS.json
           $env:PYTHONPATH='tests'
           python -m unittest test_digicert_bundle -v
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          '{"status":"INCOMPLETE","stage":"verify_files"}' | Set-Content ca_digicert/BUILD_STATUS.json
           python check_zalo_digicert.py --verify-files
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          '{"status":"INCOMPLETE","stage":"package"}' | Set-Content ca_digicert/BUILD_STATUS.json
           python scripts/package_digicert_check.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item ca_digicert/BUILD_STATUS.json
       - name: Real verified HTTPS with isolated CA bundle (no credentials)
         shell: pwsh
         run: |
