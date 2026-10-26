@@ -20,3 +20,15 @@ https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40256072444
 Job windows-python38: checkout, Python3.8.10 x64, toàn bộ suite, self-test DPAPI/SQLite/limits/failover và source launcher, đóng gói, upload artifact đều success. Tổng suite source có 136 test; hai decorator skip đều áp dụng chỉ khi không phải Windows/Python3.8.10 x64. Không có kết quả live Gemini/Zalo. GitHub public log chi tiết không truy cập được (404); kết luận dựa trên trạng thái từng step và workflow giữ exit code, không tự nhận đã đọc output log.
 
 Bổ sung kiểm tra artifact đã giải nén trong Windows CI: chạy preflight và START BAT thật từ working directory khác, với đường dẫn chứa khoảng trắng, & và !. BAT phải trả đúng mã 2 khi stdin không tương tác, không gửi tin và không tạo runtime; kiểm tra này cần run mới đạt trước khi tuyên bố thành công.
+
+## Kết quả artifact cuối đã xác minh
+
+Source/artifact commit 5fc13e2 (nhánh phát triển mới). Windows CI:
+https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40256355890
+Job 121358949082 hoàn tất success lúc 08:54:15 ngày 26/10/2026 (giờ Việt Nam). Step chạy toàn suite, run_portable self-test, preflight Python và verifier ZIP/BAT đều success; upload artifact success. Verifier chạy source giải nén trong đường dẫn có khoảng trắng/&/!, từ cwd khác; preflight DPAPI/SQLite đạt và START BAT thật trả đúng mã 2 khi không có terminal tương tác, không tạo runtime hoặc gửi API. Đây là Windows Server 2022 runner, chưa phải Windows 7 thật.
+
+ZIP cuối: downloads/JAT-Design-Win7-Python38.zip, 46 thành phần kể cả manifest.
+SHA-256: bbfdb47947ebc24285af0f6ba66d9dcb213d982690aac70bd0641e5ad6906903.
+File tải trên GitHub được đọc lại kiểm byte/hash, không chỉ kiểm file tại workspace. Bản ZIP giữ nguyên sau CI; mục báo cáo này bổ sung sau khi CI hoàn tất, không sửa source runtime đã test hoặc thay artifact.
+
+Đã đối chiếu nhánh nguồn failover và stable-ai/stable-auto/stable-live sau push: giữ đúng SHA trước khi làm. Chỉ push nhánh jat-design/win7-python38-launchers-20261026. Không thay đổi Cloudflare, webhook, bí mật hoặc dữ liệu thật.
