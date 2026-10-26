@@ -10,7 +10,7 @@ NAME = 'JAT-Design-Win7-Python38.zip'
 
 def inputs(root=ROOT):
     names = ['INSTALL_WIN7.bat', 'START_WIN7_PYTHON.bat', 'run_win7_python.py',
-             'run_portable.py', 'SYSTEM_PROMPT.txt', 'requirements.txt',
+             'run_portable.py', 'check_zalo_tls.py', 'SYSTEM_PROMPT.txt', 'requirements.txt',
              'README_WIN7_PYTHON_VI.md', 'VALIDATION_WIN7_PYTHON.md',
              'scripts/find_python38.bat', 'scripts/package_win7_python.py', 'scripts/verify_win7_python_release.py']
     files = [root/name for name in names]

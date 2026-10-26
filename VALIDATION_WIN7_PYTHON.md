@@ -52,3 +52,9 @@ ZIP hotfix SHA-256: 66a3b5f0cc4059decd50942d87cac95732d8657490ee9e07969d6c3ae383
 Ảnh người dùng: Google HTTPS certificate validation passed HTTP404, Zalo HTTPS failed. Đã phân biệt: Google TLS thành công; lỗi Zalo theo endpoint, chưa xác định CA/proxy/TLS từ thông báo cũ. Không suy đoán chắc chắn token sai, thiếu chứng chỉ hoặc bị công ty chặn.
 
 Thêm https_probe.py với hai origin cố định không credential. Chỉ trả enum và mã số allowlist, không exception message, URL token, CA subject, proxy credential hoặc response body. Xác minh chứng chỉ/hostname giữ bật. run_portable.check_https chuyển sang helper mới cho mục 4; không đổi Transport/polling/Gemini/key vault/state. Các test mô phỏng cert-code20, TLS reason, DNS, timeout, proxy403 và HTTP404; không phải bằng chứng máy Win7 đã được sửa TLS. Phải chạy lại mục 4 tại máy đích để có mã thật.
+
+## Thu hẹp theo yêu cầu: gói chẩn đoán độc lập Zalo TLS
+
+Giữ nguyên code bot Windows11, không sửa polling/sendMessage/Gemini/state. Thêm CHECK_ZALO_TLS_WIN7.bat + check_zalo_tls.py và gói JAT-Zalo-TLS-Check-Win7.zip riêng, không import jat_design hoặc đọc runtime/DPAPI/DB. Kiểm read-only DNS với thời hạn chờ, proxy tĩnh/PAC và CA override chỉ báo sự hiện diện, HTTPS có hostname/CA verification mặc định; không thử bỏ proxy, đổi resolver hoặc sửa bảo mật.
+
+Kết quả PASS/FAIL và enum/mã cert/TLS/proxy/network; không in địa chỉ IP/PAC/proxy credential/URL chứa token. Explicit proxy CONNECT 403/407 chứng minh từ chối ở proxy; lỗi certificate chỉ chứng minh validation failure, còn timeout/reset/DNS không đủ quy lỗi mạng công ty. 404 Google root vẫn TLS PASS. Kết quả source/mocks không chứng minh mạng Win7 công ty đã hoạt động; cần chạy gói độc lập tại máy đích, không cần token thật.

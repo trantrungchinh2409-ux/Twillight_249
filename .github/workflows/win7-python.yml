@@ -26,6 +26,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python run_win7_python.py --check
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python check_zalo_tls.py --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/package_zalo_tls_check.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/package_win7_python.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/verify_win7_python_release.py
@@ -37,3 +41,5 @@ jobs:
           path: |
             dist/JAT-Design-Win7-Python38.zip
             dist/JAT-Design-Win7-Python38.zip.sha256
+            downloads/JAT-Zalo-TLS-Check-Win7.zip
+            downloads/JAT-Zalo-TLS-Check-Win7.zip.sha256
