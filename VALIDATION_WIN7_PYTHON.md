@@ -40,3 +40,9 @@ Người dùng đã xác nhận SQLite 3.35.5, Python 3.8.10 x64, DPAPI/mutex/TL
 Thêm win7_console.py trong launcher source: chỉ chuyển hiển thị stdout/stderr và prompt input/getpass sang ASCII trên Win7; không chuyển đổi giá trị input/key/nội dung ứng dụng. Wrapper giữ isatty/fileno và bảo vệ no-echo của getpass. Không thay code vault, DPAPI, API, hạn mức hoặc DB; không đổi cấu hình console hệ thống. Windows mới giữ hiển thị Unicode, có JAT_ASCII_CONSOLE=1 cho kiểm thử ép nhánh tương thích.
 
 Tái hiện hồi quy với console mô phỏng từ chối Unicode: banner gốc đúng dòng 51 ném OSError, banner qua adapter đạt. Test xác nhận prompt ASCII nhưng secret/đường dẫn Unicode trả nguyên vẹn, GetPassWarning vẫn chặn fallback hiện key và phục hồi stream/input sau lỗi. Verifier ZIP Windows ép nhánh ASCII cho START BAT. Đây không thay thế chạy lại menu 1 trên Win7 thật; không tuyên bố đã nghiệm thu lỗi người dùng trước khi họ chạy bản sửa.
+
+Hotfix console commit 53b1d61 đã qua Windows CI:
+https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40259269460
+Job 121367871794: toàn bộ suite hiện có và test console mới, self-test DPAPI/SQLite, source preflight, ZIP/BAT verifier ép ASCII và upload đều success. Suite source có 142 test; Linux subset chạy 99: 98 passed, 1 native Windows skipped. Tái hiện console Unicode bằng mock là bằng chứng hồi quy, không phải test trên Windows 7 thật; vẫn cần người dùng thử lại mục 1 bằng hotfix. Không gọi Gemini/Zalo thật, không yêu cầu nhập lại secret vào chat.
+
+ZIP hotfix SHA-256: 66a3b5f0cc4059decd50942d87cac95732d8657490ee9e07969d6c3ae38302f4. Artifact đã kiểm CRC/manifest/Python3.8 syntax và đọc lại download từ GitHub; không kèm runtime. Không sửa nhánh stable, các module lõi giữ nguyên.
