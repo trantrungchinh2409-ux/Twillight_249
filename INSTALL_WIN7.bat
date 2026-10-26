@@ -10,19 +10,23 @@ if not errorlevel 1 goto :ready
 echo Nhap duong dan day du python.exe 3.8.10 x64, khong kem dau ngoac kep.
 set "JAT_PYTHON="
 set /p "JAT_PYTHON=Python: "
-if not defined JAT_PYTHON goto :failed
+if not defined JAT_PYTHON goto :python_failed
 call "%~dp0scripts\find_python38.bat"
-if errorlevel 1 goto :failed
+if errorlevel 1 goto :python_failed
 :ready
 "%JAT_PYTHON%" -X utf8 -B "%~dp0run_win7_python.py" --check
-if errorlevel 1 goto :failed
+if errorlevel 1 goto :capture_failure
 "%JAT_PYTHON%" -X utf8 -B -c "import sys; from pathlib import Path; p=Path(sys.argv[1]); p.parent.mkdir(parents=True,exist_ok=True); p.write_text(sys.executable,encoding='utf-8')" "%~dp0runtime\python38.path"
-if errorlevel 1 goto :failed
+if errorlevel 1 goto :capture_failure
 "%JAT_PYTHON%" -X utf8 -B "%~dp0run_win7_python.py" --install
 set "JAT_EXIT=%errorlevel%"
 goto :done
-:failed
-set "JAT_EXIT=1"
+:capture_failure
+set "JAT_EXIT=%errorlevel%"
+goto :failure_message
+:python_failed
+set "JAT_EXIT=20"
+:failure_message
 echo Chua san sang. Giu runtime cu, khong tai DLL la va khong xoa DB.
 :done
 echo.

@@ -16,6 +16,7 @@ from .state import State
 from .safe_audit import record
 from .reconnect import read_with_reconnect, retryable, wait
 from .webhook_switch import RUNTIME, hidden
+from .startup_check import StartupError, emit, ready, profile as check_profile
 
 
 def status_text(snapshot, provider_until=0, now=None, key_status=None):
@@ -49,30 +50,42 @@ def main():
     print('JAT AI — khóa DPAPI, mặc định OFF, 10 lượt/2 phút, nghỉ 5 phút. Không lưu lịch sử nhóm.')
     if not sys.stdin.isatty(): return 2
     controls, state = Controls(), None
+    stage = 'PROMPT'
     try:
         prompt = args.prompt.read_text(encoding='utf-8-sig').strip()
         if not prompt or len(prompt) > 4000: raise ValueError('Invalid prompt')
+        stage = 'VAULT_LOCK'
         with TokenLock(VAULT_LOCK):
+            result = ready(RUNTIME, args.prompt)
+            if result: return result
+            stage = 'VAULT_READ'
             if (RUNTIME/'profile-import.pending').exists():
                 print('OFF — chuyển hồ sơ chưa hoàn tất. Giữ dữ liệu và báo Codex.'); return 4
-            vault = Vault()
+            vault = Vault(RUNTIME/'gemini_keys.dpapi')
             if not vault.data['items']:
                 print('Chưa có khóa đã lưu. Đóng cửa sổ và mở SETUP_API.bat trước.'); return 2
             print('Đã đọc %s khóa mã hóa. Không kiểm hàng loạt hoặc gọi Gemini khi khởi động.' % len(vault.data['items']))
             pool = KeyPool(vault, prompt)
+            stage = 'TOKEN_INPUT'
             token = hidden('Bot Token Zalo (ẩn): ').strip()
             if not token: return 2
+            stage = 'BOT_LOCK'
             with TokenLock(token):
+                stage = 'ZALO_INIT'
                 transport = Transport(token)
                 zalo = OfficialAPI(transport)
                 bot_id = read_with_reconnect(zalo.getMe)
                 if read_with_reconnect(lambda: webhook_enabled(ReadOnlyTransport(transport))):
                     print('Webhook đang bật; dừng, không thay đổi.'); return 3
+                stage = 'PROFILE_INVALID'
+                check_profile(RUNTIME, bot_id)
                 group_id = verified_group(RUNTIME, bot_id)
+                stage = 'STATE_INIT'
                 state = State(RUNTIME/'ai_reply.db')
                 engine = ManagedResponder(state, bot_id, group_id)
                 if engine.blocked():
                     print('OFF — có lần gửi chưa rõ từ phiên trước. Giữ DB và báo Codex.'); return 4
+                stage = 'STARTUP_UNKNOWN'
                 cache, lock = {}, threading.Lock()
                 def refresh():
                     with lock:
@@ -137,10 +150,12 @@ def main():
                         print('OFF — kiểm tra khóa/thanh toán/kết nối trong CMD, không báo nạp tiền trong nhóm.'); return 1
     except KeyboardInterrupt:
         print('\nOFF — dừng, không tự gửi lại request đang diễn ra.'); return 130
+    except StartupError as error:
+        return emit(error.category, stage=stage)
     except APIError as error:
-        print('OFF — loại=%s mã=%s; không in nội dung bí mật.' % (error.kind, error.code)); return 1
-    except Exception:
-        print('OFF — không mở được kho/cấu hình/khóa. Đóng SETUP_API và poller khác; không xóa database.'); return 1
+        print('OFF [ZALO_API] stage=%s loại=%s mã=%s; không in nội dung bí mật.' % (stage, error.kind, error.code)); return 1
+    except Exception as error:
+        return emit(stage, error=error, stage=stage)
     finally:
         controls.command('QUIT')
         if state is not None: state.close()

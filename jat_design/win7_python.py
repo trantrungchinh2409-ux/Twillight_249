@@ -42,7 +42,7 @@ def check(output=print):
             finally:
                 db.close()
         output('OK: SQLite cua Python %s; doc/ghi database tam thanh cong.' % sqlite3.sqlite_version)
-    except (ImportError, OSError, ValueError):
+    except Exception:
         output('SQLite/_sqlite3 cua Python khong tai/ghi duoc. Khong thay DLL thu cong; giu runtime cu.')
         return 21
     try:
@@ -67,7 +67,7 @@ def check(output=print):
     except Exception:
         output('DPAPI/TLS/import/cau hinh khong dat. Khong xoa runtime, khong tat TLS; bao ma 22.')
         return 22
-    output('OK: Python 3.8.10 x64, DPAPI, mutex, TLS va source. Khong goi API, khong gui tin.')
+    output('OK ENV: Python 3.8.10 x64, DPAPI probe, mutex probe, CA/TLS va source. Chua kiem ho so/kho that; chua goi API.')
     return 0
 
 
@@ -86,6 +86,7 @@ def install_menu():
     while True:
         command = input('1: API Gemini | 2: Nhap ho so | 3: Xuat ho so | 4: Kiem HTTPS | Q: Xong: ').strip().upper()
         if command == 'Q':
+            print('Mo CHECK_WIN7.bat de kiem ho so/kho that truoc START; ENV PASS chua phai READY.')
             return 0
         if command == '1':
             from .setup_api import main as setup
@@ -104,7 +105,7 @@ def install_menu():
 def _main(argv=None):
     parser = argparse.ArgumentParser(description='JAT Design: installed Python 3.8.10 x64, not EXE')
     modes = parser.add_mutually_exclusive_group()
-    for option in ('check', 'install', 'setup', 'import-profile', 'export-profile', 'check-https'):
+    for option in ('check', 'check-ready', 'self-test', 'install', 'setup', 'import-profile', 'export-profile', 'check-https'):
         modes.add_argument('--'+option, action='store_true')
     args = parser.parse_args(argv)
     for stream in (sys.stdout, sys.stderr):
@@ -114,6 +115,20 @@ def _main(argv=None):
         result = check()
         if result or args.check:
             return result
+        if args.self_test:
+            # Existing offline test uses temporary synthetic keys/DBs only, no requests.
+            from run_portable import self_test
+            result = self_test()
+            if result: return result
+            from .startup_check import self_test as readiness_test
+            return readiness_test()
+        if args.check_ready:
+            from .startup_check import ready, emit
+            from .key_vault import VAULT_LOCK
+            from .polling_test import TokenLock
+            try:
+                with TokenLock(VAULT_LOCK): return ready(BASE/'runtime', BASE/'SYSTEM_PROMPT.txt')
+            except Exception as error: return emit('VAULT_LOCK', error=error)
         if not sys.stdin.isatty():
             print('Can CMD tuong tac; khong doc token/key tu input chuyen huong.')
             return 2

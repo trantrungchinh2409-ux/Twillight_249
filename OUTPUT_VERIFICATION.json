@@ -1,0 +1,64 @@
+{
+  "base_commit": "765218065fed0e7e854b37cedbf2bc49f9fcd4d0",
+  "branch": "jat-design/win7-python38-startup-fix-20261026",
+  "target_python_tests": {
+    "tests": 198,
+    "passed": 197,
+    "failures": 0,
+    "errors": 0,
+    "skipped": [
+      {
+        "test": "test_official_bundle_real_pins_native_signatures_and_dates (test_digicert_bundle.DigiCertBundleTests)",
+        "reason": "Official bundle/native Windows build required"
+      }
+    ],
+    "runner": "Windows-10-10.0.26300-SP0",
+    "python": "3.8.10",
+    "live_zalo": "not run",
+    "live_gemini": "not run"
+  },
+  "outside_target_python_probe": {
+    "tests": 198,
+    "passed": 192,
+    "failures": 1,
+    "errors": 3,
+    "skipped": [
+      {
+        "test": "test_official_bundle_real_pins_native_signatures_and_dates (test_digicert_bundle.DigiCertBundleTests.test_official_bundle_real_pins_native_signatures_and_dates)",
+        "reason": "Official bundle/native Windows build required"
+      },
+      {
+        "test": "test_native_offline_check_and_batch_selection_exit_status (test_win7_python.SourceLauncherTests.test_native_offline_check_and_batch_selection_exit_status)",
+        "reason": "Native Windows Python 3.8.10 x64 required"
+      }
+    ],
+    "runner": "Windows-11-10.0.26300-SP0",
+    "python": "3.13.9",
+    "live_zalo": "not run",
+    "live_gemini": "not run"
+  },
+  "outside_target_note": "Python3.13 default partial-chain flags rejected by unchanged G3 context; target launcher requires3.8.10. No TLS downgrade or claim of Python3.13 support.",
+  "real_batch_checks": "START noninteractive2; CHECK missing-profile33; SELF_TEST0; SETUP/IMPORT/EXPORT noninteractive2; INSTALL simulated preflight21 preserved; path has spaces & !",
+  "tls_root_der_sha256": "31ad6648f8104138c738f39ea4320133393e3a18cc02296ef97c2ac9ef6731d0",
+  "unchanged_protected_files": {
+    "jat_design/official_api.py": "22bd36c68158d4ba5ae17b5a5ac877e881fb851e4e23de422146d52fd5277ac4",
+    "jat_design/zalo_tls.py": "3680af0ab7c7913e60b9fbcab56a02ce1c24910edcd0834a92f2d4f792b41d65",
+    "jat_design/polling_test.py": "8318a9a604e5d52346c2c2acdfb9c1dffad9c2c1547b6b21f48b70feae74ed2d",
+    "jat_design/gemini_client.py": "69128ab9b52bbd6630150fd4f3b94f4142a1364badcadae48e77188767203723",
+    "jat_design/key_vault.py": "184ae37eb2e8c9022d8c56620214a0f3ee35986a847d1fa647dbcf5ca630a748",
+    "jat_design/managed_limits.py": "1d8fe09dc2302e93c7fcadc3aa2bb37e0cbf8604898e8ce3fc2226da328a62af",
+    "jat_design/state.py": "cfebc846c0ba9f08ad48713834f5c3785479c0b3f5031d872fc4c89dc0de9140",
+    "jat_design/auto_reply.py": "45d5ef38f39a6694d9e574430899314b4a4c94e64fba64e152ebe8f61d9f697d",
+    "jat_design/reconnect.py": "4c58df80fd52010307b7984ab7faf96e52ef918cbfe111f4cfbd8d2d82883278",
+    "jat_design/portable_profile.py": "e5112da345b31400d3d6da056da4a2b1f2740875812706139c262ccfcbd57dc2",
+    "jat_design/webhook_switch.py": "a3b0bc6807affd14ccf6177110c0f652a7f260a876c99e8a222fceb61482cf12",
+    "jat_design/setup_api.py": "99c2b44562d92d54ec89673a98a30cd53953ad20fb64ee622ed7810d088e22fc",
+    "SYSTEM_PROMPT.txt": "11203d606f108bb8af820daa7314a35fab2b214e59ad2aeb71df19350a0ae7d6",
+    "certs/DigiCertGlobalRootG3.pem": "1914cd2d4cde263315f9e32c7683fc0e1b921919ad12b256d49bf782011c03cc"
+  },
+  "live_requests_with_credentials": 0,
+  "real_win7_test": "not run",
+  "live_zalo_test": "not run",
+  "uncertain_send_guard": "preserved",
+  "user_runtime_modified": false
+}

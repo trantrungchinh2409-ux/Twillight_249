@@ -1,3 +1,4 @@
+import io
 import os
 from pathlib import Path
 import ssl
@@ -38,7 +39,7 @@ class DigiCertBundleTests(unittest.TestCase):
     def test_probe_404_is_verified_tls_not_auth_and_errors_never_leak(self):
         context=ssl.create_default_context()
         class Fake:
-            def open(self,url,timeout):raise urllib.error.HTTPError(url,404,'private',{},None)
+            def open(self,url,timeout):raise urllib.error.HTTPError(url,404,'private',{},io.BytesIO(b''))
         with patch('builtins.print') as output:
             result=checker.probe('CHECK',context,opener=Fake())
         self.assertEqual(result['tls'],'PASS')

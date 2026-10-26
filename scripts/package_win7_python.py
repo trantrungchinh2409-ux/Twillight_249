@@ -5,11 +5,11 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-NAME = 'JAT-Design-Win7-Python38.zip'
+NAME = 'JAT-Design-Win7-Python38-StartupFix-20261026.zip'
 
 
 def inputs(root=ROOT):
-    names = ['INSTALL_WIN7.bat', 'START_WIN7_PYTHON.bat', 'run_win7_python.py',
+    names = ['CHECK_WIN7.bat', 'SETUP_API.bat', 'INIT_PROFILE_WIN7.bat', 'EXPORT_PROFILE_WIN7.bat', 'SELF_TEST_WIN7.bat', 'README_STARTUP_FIX_VI.md', 'VALIDATION_STARTUP_FIX.md', 'OUTPUT_VERIFICATION.json', 'scripts/run_startup_tests.py', 'INSTALL_WIN7.bat', 'START_WIN7_PYTHON.bat', 'run_win7_python.py',
              'digicert_bundle.py', 'check_zalo_digicert.py', 'run_portable.py', 'check_zalo_tls.py', 'zalo_cert_check.py', 'inspect_zalo_windows_chain.ps1', 'SYSTEM_PROMPT.txt', 'requirements.txt',
              'README_WIN7_PYTHON_VI.md', 'VALIDATION_WIN7_PYTHON.md',
              'certs/DigiCertGlobalRootG3.pem', 'certs/PROVENANCE.json', 'README_WIN7_ZALO_TLS_VI.md', 'VALIDATION_WIN7_ZALO_TLS.md',
@@ -36,7 +36,7 @@ def package(output=None):
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, data)
         info = zipfile.ZipInfo('JAT-Design-Win7-Python38/SOURCE_MANIFEST.json', (2026, 10, 26, 0, 0, 0))
-        archive.writestr(info, json.dumps({'base_commit': '61a1a3d9884938736ee83a762e3cdf10cc570105',
+        archive.writestr(info, json.dumps({'base_commit': '765218065fed0e7e854b37cedbf2bc49f9fcd4d0',
             'runtime': 'installed CPython 3.8.10 x64; standard library only', 'sha256': manifest}, indent=2).encode('utf-8'))
     with zipfile.ZipFile(output) as archive:
         if archive.testzip() is not None:
