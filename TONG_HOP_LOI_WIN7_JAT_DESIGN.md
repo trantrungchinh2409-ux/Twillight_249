@@ -1,6 +1,8 @@
 # JAT Design — tổng hợp vấn đề Windows 7 và bàn giao kiểm tra tại nhà
 
-Cập nhật: **26/10/2026**. Tài liệu này tổng hợp bằng chứng đã có và việc còn cần làm; không yêu cầu viết lại bot.
+Cập nhật: **26/10/2026**. Đây là **một file tổng hợp toàn bộ các sự cố đã được đưa vào cuộc trao đổi về bản Win7, gồm các lỗi người dùng nhắc lại trong buổi làm việc và lỗi phát sinh khi chuẩn bị bản sửa**. Một số log không có timestamp nên không tự gán giờ hoặc khẳng định tất cả đều phát sinh sáng 26/10. Tài liệu ghi bằng chứng đã có, cách xử lý và việc còn cần làm; không yêu cầu viết lại bot.
+
+File này đã gộp nội dung lỗi, quá trình xử lý, link tải, kết quả kiểm thử và hướng dẫn tiếp tục tại nhà; không cần ghép nhiều báo cáo để nắm tình trạng.
 
 ## 1. Kết luận hiện tại
 
@@ -193,3 +195,61 @@ python -m unittest test_zalo_ca_config test_official_api test_https_probe -v
 | DPAPI không giải mã được sau chuyển máy | Kho gắn máy/tài khoản; nhập lại key tại máy đích và chuyển hồ sơ đúng luồng |
 
 Mục tiêu nghiệm thu cuối: bản source Python3.8 trên Win7 dùng root riêng cho Zalo, Google/Gemini giữ trust cũ, bot chạy theo logic đã thành công trước đây và các giới hạn/guard không thay đổi.
+
+
+## 11. Danh sách đầy đủ các lỗi và vướng mắc trong buổi làm việc
+
+Mục này bổ sung cả các log lỗi cũ người dùng đưa lại và lỗi của môi trường chuẩn bị gói. Không coi lỗi môi trường Codex/GitHub là lỗi của máy Win7.
+
+| STT | Lỗi / vướng mắc | Bằng chứng hoặc mã | Đã xử lý đến đâu |
+| --- | --- | --- | --- |
+| 1 | EXE cũ không nạp được SQLite | `_sqlite3` | Dùng Python3.8.10 x64 trực tiếp; người dùng đã xác nhận module SQLite3.35.5 đọc/ghi thành công. Không build lại EXE |
+| 2 | Nhầm SQLite cài ngoài với SQLite của Python | Có SQLite chưa đồng nghĩa `_sqlite3` của interpreter chạy được | Preflight kiểm đúng module trong Python. Trường hợp người dùng hiện tại đã PASS |
+| 3 | Chọn menu1 API Gemini bị traceback rồi thoát | `win7_python.py:118 -> install_menu:89 -> setup_api.py:51`, kết quả120; dòng exception cuối không có trong log ban đầu | Đã có bản console ASCII. Không khẳng định chính xác exception gốc chỉ từ mã120; cần traceback đầy đủ nếu lặp lại |
+| 4 | Chạy bot báo lỗi TLS nhưng thiếu mã sâu | `OFF - loai=tls ma=None`, kết quả1 | `ma=None` chỉ là wrapper không có mã API, không phải kết luận token sai. Công cụ riêng sau đó lấy được verify code19 |
+| 5 | Google hiện HTTP404 gây hiểu nhầm lỗi HTTPS | `HTTPS certificate validation passed, HTTP 404` | Đây là TLS PASS ở URL gốc. Không cần sửa API key để xử lý HTTP404 của phép kiểm này |
+| 6 | Zalo HTTPS lỗi nhưng thông báo cũ ẩn chi tiết | `Zalo: HTTPS failed; details hidden, no security settings changed` | Bổ sung diagnostic chỉ đọc với category/code an toàn; không gọi API có credential |
+| 7 | Zalo không xác minh được chain | DNS PASS, TLS FAIL; `category=CERTIFICATE`, `cause=self_signed_certificate_in_chain`, `certificate_code=19`, exit1 | Root-only T2 thực tế đã PASS; bản tích hợp đưa root G3 vào context Zalo riêng |
+| 8 | Thiếu issuer/root trong đường xây chain | Issuer RapidSSL TLS ECC CA G1; certutil `Missing Issuer: DigiCert Global Root G3` | Root G3 đã xác minh pin. T3 cũng PASS nhưng T2 đủ, nên không bổ sung intermediate vào ZIP runtime |
+| 9 | Nghi ngờ proxy công ty / thiếu root / revocation | Mã19 có thể có nhiều nguyên nhân; các log đầu chưa phân biệt đủ | Kết quả T2 chứng minh root riêng khắc phục được trên đường kết nối đã thử; không có bằng chứng để kết luận proxy là nguyên nhân duy nhất. Chưa đo CRL/OCSP |
+| 10 | Môi trường chuẩn bị gói không tải được DigiCert qua HTTPS | Các lần truy cập DigiCert bị giới hạn đường mạng; lần kiểm cuối báo `URLError -> OSError` cho cả root và intermediate | Không bypass SSL/HTTP/mirror, không lặp CI tiếp. Cuối cùng lấy root đã tin cậy có sẵn, DER khớp tuyệt đối pin đã xác minh và kiểm chữ ký bằng OpenSSL |
+| 11 | GitHub Actions bước tên “Fetch official HTTPS, pin root, verify public CA signatures” lỗi | Run cuối `40297807016`, job `121488041263`, step4 exit1 | Metadata `stage=tests`: fetch/pin/signature đã exit0, sau đó unit test lỗi. **Không được kết luận lần CI cuối lỗi tại URL tải CA chỉ vì tên step có chữ Fetch** |
+| 12 | Không đọc được chi tiết traceback của CI | Endpoint log công khai trả HTTP404, giao diện yêu cầu đăng nhập | Chỉ xác định được stage và exit1, chưa biết test cụ thể. Đã dừng retry; đây là giới hạn truy cập log, không chứng minh code bot lỗi |
+| 13 | Gói chẩn đoán không có CA, Win7 phải tự tải | `JAT-Zalo-DigiCert-Win7.zip` bản đầu là downloader | Không đạt mục tiêu offline thực sự. Không dùng lại gói này để chạy bot; thay bằng ZIP runtime G3 ở mục2 |
+| 14 | Python Win7 cũng không tin HTTPS của DigiCert | `OFFICIAL_BUNDLE=FAIL`, `stage=root_download`, URL `https://cacerts.digicert.com/DigiCertGlobalRootG3.crt`, category CERTIFICATE, code19, exit1 | Đây là lỗi thật người dùng đã chạy. Phải có CA đóng sẵn, không tiếp tục bắt Win7 tự tải CA qua kết nối đang không xác minh được |
+| 15 | Chưa thể đóng gói offline khi chưa có chứng chỉ đã xác minh | Báo FAIL trước đó vì chưa lấy được file CA đủ bằng chứng trong workspace | Tình trạng này đã thay đổi: root khớp pin được tìm thấy trong CA store môi trường, kiểm chữ ký đạt, đã đóng trong ZIP tích hợp. Không còn là “ZIP hiện tại thiếu CA” |
+| 16 | Chạy toàn suite Windows trên Linux có lỗi nền tảng | Lần cũ: 167 test, 1 failure, 22 errors, 4 skipped; nhiều lỗi cần Windows DPAPI/encrypted backup | Không tính thành test đạt, không sửa bot để ép Linux hỗ trợ DPAPI. Phiên tích hợp chạy suite phù hợp: 127 đạt/3 skipped; native Windows vẫn cần nghiệm thu |
+| 17 | Chưa nghiệm thu bản tích hợp mới trên Win7 | Có T1–T4 PASS/FAIL thực tế cho công cụ TLS, chưa có log bot từ ZIP d79845e | Đây là việc còn lại chính: preflight, menu4 HTTPS, rồi chạy bot theo luồng cũ. Không tuyên bố bot mới đã live thành công |
+
+### Các điểm dễ nhầm cần nói rõ với người sửa tại nhà
+
+- **Mã120 không phải verify code19.** Một mã thuộc tiến trình/menu trước đây, một mã thuộc xác minh chứng chỉ. Không gộp thành một nguyên nhân.
+- **HTTP404 Google không phải proxy CONNECT403.** HTTP status của URL gốc sau TLS và lỗi tunnel/proxy là hai lớp khác nhau.
+- **CI lỗi không đồng nghĩa Win7 lỗi.** CI có lỗi unit test chưa đọc được chi tiết; máy Win7 có bằng chứng TLS cụ thể. Không cần CI phải xanh mới có thể kiểm tra ZIP đã đóng root tại máy đích.
+- **Root fingerprint không phải checksum ZIP hoặc checksum PEM.** Xem đúng hai chuỗi khác nhau ở mục2 và mục5.
+- **T2/T3 PASS chưa phải bot live PASS.** Nó chứng minh chain/hostname ở phép đo, không chứng minh quyền token, trạng thái webhook, hồ sơ nhóm hoặc Gemini quota.
+- **Không có intermediate trong ZIP mới không phải thiếu CA cần thiết đã chứng minh.** Root G3 có sẵn và root-only đã PASS trên máy người dùng.
+
+## 12. Lỗi lịch sử thuộc Cloudflare — để tránh lẫn với Win7
+
+Cuộc trao đổi còn có các sự cố từ hướng Worker/webhook trước khi chuyển sang Python polling. Không có đủ mốc để gọi những sự cố này là lỗi “sáng nay”; ghi ở đây để người tiếp nhận thấy đầy đủ lịch sử mà không sửa sai hệ thống.
+
+| Hướng cũ | Bằng chứng đã được báo trước đó | Liên quan bản Win7 hiện tại |
+| --- | --- | --- |
+| Deploy/API qua proxy | Có báo proxy403 CONNECT trong giai đoạn Cloudflare | Không phải bằng chứng mạng Zalo trên Win7 hiện tại vẫn bị chặn |
+| Quan sát WebSocket | Wrangler tail WebSocket bị proxy chặn403, hai event cũ không lưu | Không dùng WebSocket để sửa Python polling |
+| Phiên thu D1 | Phiên quan sát hết hạn, cần mở lại; có các lần chưa thấy event A/C | Không dùng D1 để sửa trust store của Python Win7 |
+| Callback Zalo tới Worker | testWebhook chính thức báo `webhook.http.403`; cần phân biệt Edge/Access/đường Zalo bằng bằng chứng | Không liên quan trực tiếp code19 khi Python Win7 gọi Zalo HTTPS |
+| GROUP mention contract trong Worker | Chưa có bằng chứng đầy đủ để mở parser/gửi nhóm ở hướng Cloudflare | Không tự mang thay đổi/parser/guard từ nhánh Cloudflare sang bot Windows11 đã hoạt động |
+
+Không deploy Worker, đổi domain, tắt WAF/Access hoặc chỉnh Cloudflare để giải quyết lỗi HTTPS Win7 đã được root G3 khắc phục.
+
+## 13. Việc còn lại duy nhất trước khi kết luận “đã chạy được Win7”
+
+- Dùng đúng ZIP **Python38-G3** tại mục2, giữ dữ liệu runtime.
+- Preflight trên máy công ty đạt, có dòng xác minh Zalo-only root G3.
+- Menu4: Zalo và Google đều TLS PASS.
+- Chạy bot bằng START_WIN7_PYTHON.bat, các cổng quyền/webhook/nhóm/vault theo luồng cũ đạt.
+- Thử bot trong phạm vi đã duyệt, giữ giới hạn và chống trùng; không mở bot trên hai máy cùng lúc.
+
+Nếu đạt các bước này thì ghi log nghiệm thu đã lọc vào phiên hỗ trợ tiếp theo. Nếu chưa đạt, sửa theo mã lỗi tại đúng bước, không làm lại dự án từ đầu.
