@@ -62,3 +62,13 @@ Kết quả PASS/FAIL và enum/mã cert/TLS/proxy/network; không in địa ch�
 Gói độc lập commit 5a94ff1 đã qua Windows Python3.8.10 x64 CI:
 https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40260916802
 Job 121372907097: toàn suite (gồm test phân loại TLS mới), standalone --help, đóng gói độc lập, preflight/ZIP verifier và upload success. Linux subset 109 test: 108 passed, 1 Windows-native skipped. Đây là kiểm chứng chương trình, không phải kết nối thực tế từ mạng công ty Win7. Link ZIP GitHub đã GET200 và đối chiếu SHA-256 af17aad4eaa34f473c994a8378fa1c12a1b647fb7a3bf8125c8dd813b7c39697. ZIP độc lập chỉ có 4 file cần thiết và manifest, không chứa module bot, runtime hoặc secret. Chờ kết quả phân loại trên Win7 trước khi đề xuất sửa CA/proxy/TLS; không tiếp tục sửa code nhận/gửi đã hoạt động.
+
+## Certificate code19: bản đối chiếu CA/chain không bypass
+
+Người dùng báo Win7 thật: Google PASS, Zalo FAIL certificate_code19/self_signed_certificate_in_chain. Đây là lỗi đường tin cậy, chưa chứng minh một mình là proxy công ty hay thiếu CA. Đã đọc source CPython3.8.10 chính thức: load_default_certs trên win32 nạp CA/ROOT với server-auth rồi OpenSSL default paths; không mặc định certifi.
+
+Gói riêng CHECK_ZALO_CERT_WIN7.bat/zalo_cert_check.py/inspect_zalo_windows_chain.ps1: chỉ đọc Windows ROOT/CA và Python CA fingerprint sets, xác thực HTTPS bằng default Python và Windows/.NET, kiểm route proxy/direct cùng hay khác, in fingerprint/status của chuỗi Windows xây dựng nếu được cung cấp. Không mở unverified socket để thu chain. Nếu policy PowerShell chặn, dừng phần đó, không ExecutionPolicy Bypass hoặc sửa policy. Không gọi bot, đọc DB/key hoặc sửa logic nhận/gửi đã chạy trên Win11.
+
+CA tùy chọn: chỉ khi file CA công khai do IT duyệt cho HTTPS và fingerprint SHA256 nhập từ kênh độc lập khớp; kiểm BasicConstraints CA=true/keyCertSign nếu có. Context bổ sung chỉ trong tiến trình kiểm, giữ cert/hostname/flags; không tự import Windows CA hoặc đổi env. Known Windows distrust/revoked/usage/validity/other non-root/partial-chain errors ngăn phép thử CA override. Exit2 khi chỉ CA riêng PASS, không coi bot đã sửa. Cần defaultPASS Exit0 sau IT giải quyết đúng trust/policy mới chạy bot lại. Không tự tạo CA, không kèm CA/private key trong ZIP.
+
+Giới hạn: Windows chain không phải raw on-wire chain, và Windows/Python có thể dùng PAC/route khác nhau; không quy lỗi proxy hay trust từ hai kết quả khác route. Nếu không lấy được cert sau validation failure, báo UNAVAILABLE và hướng dẫn IT/browser certificate viewer, không bỏ SSL để xem.

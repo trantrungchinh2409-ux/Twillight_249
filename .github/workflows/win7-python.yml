@@ -28,6 +28,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python check_zalo_tls.py --help
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python zalo_cert_check.py --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $parseErrors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'inspect_zalo_windows_chain.ps1'), [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) { throw 'Certificate inspection PowerShell parse failed' }
+          python -c "import zalo_cert_check as p; r=p.windows_probe(); print('WINDOWS_PROBE_HTTPS='+r.get('WINDOWS_HTTPS','UNAVAILABLE')); print('CHAIN_COUNT='+str(len(r['certificates']))); assert r.get('WINDOWS_HTTPS') in ('PASS','FAIL'); assert r.get('WINDOWS_HTTPS') != 'PASS' or (r.get('LEAF_SHA256') and r['certificates'])"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/package_zalo_cert_check.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/package_zalo_tls_check.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/package_win7_python.py
@@ -43,3 +53,5 @@ jobs:
             dist/JAT-Design-Win7-Python38.zip.sha256
             downloads/JAT-Zalo-TLS-Check-Win7.zip
             downloads/JAT-Zalo-TLS-Check-Win7.zip.sha256
+            downloads/JAT-Zalo-Certificate-Check-Win7.zip
+            downloads/JAT-Zalo-Certificate-Check-Win7.zip.sha256
