@@ -28,6 +28,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/package_win7_python.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/verify_win7_python_release.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: JAT-Design-Win7-Python38-source

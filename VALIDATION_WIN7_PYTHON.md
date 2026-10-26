@@ -14,3 +14,9 @@ ZIP theo allowlist, có CRC/readback/SHA-256 và SOURCE_MANIFEST.json; không ba
 Chưa nghiệm thu trên máy Windows 7 SP1 thật; không có cuộc gọi Gemini/Zalo thật trong lần sửa này. Cần người dùng chạy INSTALL rồi START trên máy đích. Không thay đổi mạng, chứng chỉ, webhook hoặc dịch vụ Cloudflare đang có.
 
 Kết quả tại môi trường Codex: suite đa nền tảng được chọn chạy 93 test, 92 passed và 1 native-Windows skipped, không lỗi. Sáu test launcher riêng: 5 passed, 1 native-Windows skipped. Đã đối chiếu diff: các module lõi được liệt kê ở trên và SYSTEM_PROMPT.txt hoàn toàn không đổi. ZIP đã kiểm CRC và SHA-256 từng thành phần; không kèm file bí mật hoặc DB. Không coi các skip Windows là passed.
+
+Windows CI đã xác minh thành công cho source commit 84541268f3bdeef2f83ff0a6522176d247e6288a:
+https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40256072444
+Job windows-python38: checkout, Python3.8.10 x64, toàn bộ suite, self-test DPAPI/SQLite/limits/failover và source launcher, đóng gói, upload artifact đều success. Tổng suite source có 136 test; hai decorator skip đều áp dụng chỉ khi không phải Windows/Python3.8.10 x64. Không có kết quả live Gemini/Zalo. GitHub public log chi tiết không truy cập được (404); kết luận dựa trên trạng thái từng step và workflow giữ exit code, không tự nhận đã đọc output log.
+
+Bổ sung kiểm tra artifact đã giải nén trong Windows CI: chạy preflight và START BAT thật từ working directory khác, với đường dẫn chứa khoảng trắng, & và !. BAT phải trả đúng mã 2 khi stdin không tương tác, không gửi tin và không tạo runtime; kiểm tra này cần run mới đạt trước khi tuyên bố thành công.
