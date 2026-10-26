@@ -46,3 +46,9 @@ https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40259269460
 Job 121367871794: toàn bộ suite hiện có và test console mới, self-test DPAPI/SQLite, source preflight, ZIP/BAT verifier ép ASCII và upload đều success. Suite source có 142 test; Linux subset chạy 99: 98 passed, 1 native Windows skipped. Tái hiện console Unicode bằng mock là bằng chứng hồi quy, không phải test trên Windows 7 thật; vẫn cần người dùng thử lại mục 1 bằng hotfix. Không gọi Gemini/Zalo thật, không yêu cầu nhập lại secret vào chat.
 
 ZIP hotfix SHA-256: 66a3b5f0cc4059decd50942d87cac95732d8657490ee9e07969d6c3ae38302f4. Artifact đã kiểm CRC/manifest/Python3.8 syntax và đọc lại download từ GitHub; không kèm runtime. Không sửa nhánh stable, các module lõi giữ nguyên.
+
+## TLS diagnostic v2 — phản hồi thực tế Win7
+
+Ảnh người dùng: Google HTTPS certificate validation passed HTTP404, Zalo HTTPS failed. Đã phân biệt: Google TLS thành công; lỗi Zalo theo endpoint, chưa xác định CA/proxy/TLS từ thông báo cũ. Không suy đoán chắc chắn token sai, thiếu chứng chỉ hoặc bị công ty chặn.
+
+Thêm https_probe.py với hai origin cố định không credential. Chỉ trả enum và mã số allowlist, không exception message, URL token, CA subject, proxy credential hoặc response body. Xác minh chứng chỉ/hostname giữ bật. run_portable.check_https chuyển sang helper mới cho mục 4; không đổi Transport/polling/Gemini/key vault/state. Các test mô phỏng cert-code20, TLS reason, DNS, timeout, proxy403 và HTTP404; không phải bằng chứng máy Win7 đã được sửa TLS. Phải chạy lại mục 4 tại máy đích để có mã thật.

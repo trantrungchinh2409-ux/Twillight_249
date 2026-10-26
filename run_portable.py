@@ -91,20 +91,8 @@ def self_test():
 
 
 def check_https():
-    from jat_design.official_api import NoRedirect
-    # Fixed unauthenticated origins, no key/token or Zalo update consumption.
-    failures = 0
-    opener = urllib.request.build_opener(NoRedirect())
-    for name, url in (('Google', 'https://generativelanguage.googleapis.com/'),
-                      ('Zalo', 'https://bot-api.zaloplatforms.com/')):
-        try:
-            with opener.open(url, timeout=20) as response: code = response.status
-            print('%s: HTTPS certificate validation passed, HTTP %s' % (name, code))
-        except urllib.error.HTTPError as error:
-            print('%s: HTTPS certificate validation passed, HTTP %s' % (name, error.code))
-        except Exception:
-            failures += 1; print('%s: HTTPS failed; details hidden, no security settings changed' % name)
-    return 1 if failures else 0
+    from jat_design.https_probe import check_https as probe
+    return probe()
 
 
 def main():

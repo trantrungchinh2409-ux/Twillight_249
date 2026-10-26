@@ -35,3 +35,7 @@ Xem VALIDATION_WIN7_PYTHON.md. Không có máy Windows 7 tại môi trường Co
 Launcher mới tự bật hiển thị ASCII/không dấu trên Windows 7. Chỉ đổi cách hiển thị thông báo và prompt CMD; không đổi dữ liệu nhập, API key, đường dẫn, prompt Gemini, nội dung Zalo hoặc dữ liệu DPAPI. Nhập key vẫn dùng getpass, không cho rơi về chế độ hiện key. Không cần đổi registry, font, chứng chỉ hoặc cài lại Python.
 
 Đóng CMD bot/cài đặt cũ. Giải nén bản cập nhật đè file chương trình trong **cùng thư mục hiện tại**, giữ nguyên runtime, rồi chạy lại INSTALL_WIN7.bat → 1. ZIP không chứa runtime nên không ghi đè kho/DB. Nếu vẫn lỗi, chỉ gửi các dòng báo lỗi kỹ thuật; không gửi key/token hoặc file runtime.
+
+## Khi Google qua HTTPS nhưng Zalo lỗi
+
+HTTP 404 ở địa chỉ gốc Google vẫn chứng minh TLS được xác minh, không phải lỗi key. Nếu Zalo lỗi, bản mục 4 mới in `TLS diagnostic v2` và các mã an toàn: certificate_verification_failed/certificate_code, tls_handshake_failed/tls_reason, proxy_connect_rejected/proxy_http, timeout, dns_failed hoặc network_failed/os_code. Chỉ gửi các dòng mã đó để chẩn đoán; không gửi key/token hoặc cấu hình proxy riêng. Không đủ bằng chứng để tự kết luận firewall hay chứng chỉ gốc khi chưa có mã. Bộ kiểm tra không sửa CA, TLS, proxy hoặc mạng công ty.
