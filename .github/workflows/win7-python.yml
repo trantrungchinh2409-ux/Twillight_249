@@ -1,0 +1,37 @@
+name: JAT Win7 Python source validation
+on:
+  workflow_dispatch:
+  push:
+    branches: ['jat-design/win7-python38-*']
+  pull_request:
+    paths: ['jat_design/**', 'tests/**', '*WIN7*.bat', 'run_win7_python.py', 'scripts/find_python38.bat', 'scripts/package_win7_python.py', '.github/workflows/win7-python.yml']
+permissions:
+  contents: read
+jobs:
+  windows-python38:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.8.10'
+          architecture: x64
+      - name: Native DPAPI, SQLite, existing suite and source launcher
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python run_portable.py --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python run_win7_python.py --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/package_win7_python.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JAT-Design-Win7-Python38-source
+          if-no-files-found: error
+          path: |
+            dist/JAT-Design-Win7-Python38.zip
+            dist/JAT-Design-Win7-Python38.zip.sha256
