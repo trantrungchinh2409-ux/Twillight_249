@@ -20,6 +20,7 @@ def main(argv=None):
     parser=argparse.ArgumentParser()
     g=parser.add_mutually_exclusive_group()
     g.add_argument('--names',action='store_true');g.add_argument('--check',action='store_true')
+    g.add_argument('--probe-followup',action='store_true')
     g.add_argument('--self-test',action='store_true')
     args=parser.parse_args(argv)
     if not verify_base(BASE):
@@ -40,6 +41,9 @@ def main(argv=None):
                 from jat_design.polling_test import TokenLock
                 from jat_design.startup_check import ready
                 with TokenLock(VAULT_LOCK):return ready(BASE/'runtime',BASE/'SYSTEM_PROMPT.txt')
+            if args.probe_followup:
+                from jat_design.agent_followup_probe import main as probe
+                return probe(BASE)
             if args.names:
                 from jat_design.agent_names import main as names
                 return names(BASE)

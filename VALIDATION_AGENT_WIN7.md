@@ -75,3 +75,12 @@ Một lượt đã hoàn thành tại https://github.com/trantrungchinh2409-ux/T
 - Chạy một lần, không retry workflow. Commit report/final ZIP dùng skip ci và không đổi workflow để chạy lại.
 
 Kết quả này thay trạng thái “native pending” ở mục trên; không thay đổi các giới hạn live Win7/Zalo đã ghi. Đây là kiểm interpreter3.8.10/native Windows, chưa phải chạy Agent thật trên Windows7 ở công ty. Không có sửa code runtime sau lượt native PASS; chỉ cập nhật tài liệu/báo cáo/allowlist đóng gói.
+
+
+## Bản chẩn đoán FOLLOWUP sau thử Zalo thật
+
+Người dùng đã xác nhận Agent chạy Win7, tên AI JAT/Gemini/typing API hoạt động, nhưng tin thường và Reply không @ không trả lời, observed.plain=0. Không coi bộ đếm Worker là số result gốc từ API.
+
+Source xác nhận lỗi snapshot khi đổi mode trong long-poll; test tái hiện code cũ loại event mới. Chỉ vá dispatch lấy snapshot mới với timestamp sau armed; job cũ vẫn bị hủy, OFF/ON không hồi sinh event cũ. Thêm probe A/B/C chỉ đọc result trước valid_event và dry-run Worker, giữ mọi ID/text/token/nonce trong RAM; file chỉ metadata booleans/enum và counts, không ghi ID hash.
+
+Các trường hợp probe test được: result nonempty nhưng schema bị từ chối, thiếu is_bot làm Worker bỏ trước observed, text chứa trigger khiến plain vẫn0, API empty thật, map cùng sender bằng RAM và group đã duyệt, readonly SQLite, không start worker/không gửi, không lộ private enum/ID/text. Thử nghiệp mới chưa chạy bằng token thật tại môi trường phát triển; xem FOLLOWUP_DIAGNOSIS_VI.md. Native test report mới sẽ ghi toàn suite của bản chẩn đoán, không lấy PASS252 của bản trước làm PASS cho bản này.

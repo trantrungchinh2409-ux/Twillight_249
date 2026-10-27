@@ -1,5 +1,6 @@
 """One poller plus one serialized AI/send worker; original basic runner is untouched."""
 import queue
+import math
 import threading
 import time
 from .agent_engine import AgentControls,AgentService
@@ -92,6 +93,18 @@ class AgentWorker:
             self.token=None
 
 
+def dispatch_received_event(controls,worker,event,received,clock=time.time):
+    # A command may change mode while long-poll is in flight. Use current mode
+    # only for events born after its arm boundary; queued old jobs keep their epoch.
+    current=controls.snapshot()
+    if not current['bot'] or current['quit']:return False
+    message=event.get('message') if isinstance(event,dict) else None
+    stamp=message.get('date') if isinstance(message,dict) else None
+    if type(stamp) not in (int,float) or not math.isfinite(stamp):return False
+    if not current['armed']<=stamp<=clock()*1000+60000:return False
+    return worker.submit(event,current,received)
+
+
 def keyboard(controls,worker):
     import sys
     import json
@@ -141,7 +154,7 @@ def main(base):
                         wait(60 if detail.get('code')==429 else min(60,5*2**min(failures-1,4)),quit_now=lambda:controls.snapshot()['quit'])
                         continue
                     failures=0
-                    if event is not None and controls.valid(snapshot):worker.submit(event,snapshot,time.monotonic())
+                    if event is not None:dispatch_received_event(controls,worker,event,time.monotonic())
                 return 1 if worker.failed else 0
             finally:
                 controls.command('QUIT')
