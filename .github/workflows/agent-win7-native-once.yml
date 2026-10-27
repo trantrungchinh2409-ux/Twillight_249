@@ -1,0 +1,44 @@
+name: Agent native Python38 offline validation
+on:
+  push:
+    branches: ['jat-design/agent-win7-20261027']
+    paths: ['.github/workflows/agent-win7-native-once.yml']
+permissions:
+  contents: write
+jobs:
+  native-offline:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve packaged source bytes for baseline hashes
+        shell: pwsh
+        run: |
+          git config core.autocrlf false
+          git checkout-index --all --force
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.8.10'
+          architecture: x64
+      - name: Run all tests once with sockets blocked and no app credentials
+        shell: pwsh
+        run: python scripts/run_agent_native_tests.py
+      - name: Upload safe native test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-native-python3810-safe-report
+          path: AGENT_NATIVE_TEST_REPORT.json
+          if-no-files-found: warn
+      - name: Publish safe metadata only to development branch
+        if: always()
+        shell: pwsh
+        run: |
+          if (!(Test-Path AGENT_NATIVE_TEST_REPORT.json)) { exit 0 }
+          if ($env:GITHUB_REF -ne 'refs/heads/jat-design/agent-win7-20261027') { throw 'Wrong branch' }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add AGENT_NATIVE_TEST_REPORT.json
+          git commit -m 'Record native offline Python3.8.10 Agent test result [skip ci]'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:refs/heads/jat-design/agent-win7-20261027

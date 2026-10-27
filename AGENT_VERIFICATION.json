@@ -1,0 +1,31 @@
+{
+  "branch": "jat-design/agent-win7-20261027",
+  "accepted_base_commit": "8dcb83e6fc5b4112e7c194983916d59346ad8bba",
+  "offline_tests": {
+    "run": 184,
+    "passed": 179,
+    "skipped": 5,
+    "failures": 0,
+    "errors": 0,
+    "runner": "Linux-6.18.55-x86_64-with-glibc2.41",
+    "python": "3.12.14"
+  },
+  "agent_tests": {
+    "run": 34,
+    "passed": 33,
+    "skipped_native_windows_dpapi": 1
+  },
+  "live_zalo": "not run",
+  "typing_live_verified": false,
+  "sender_followup_live_delivery_verified": false,
+  "reply_metadata_verified": false,
+  "followup_default": "OFF; manager explicit confirmation required; independent of Reply metadata",
+  "group_history": "no full-group storage; only qualified session turns,6 pairs,300s TTL,DPAPI",
+  "original_core_files_modified": 0,
+  "original_profile_db_modified_by_agent": false,
+  "runtime_in_archive": false,
+  "credentials_in_archive": false,
+  "stable_modified": false,
+  "ci_runs_started": 0,
+  "full_request_notes": "Sender follow-up is implemented; API must actually deliver non-mention events. Cannot reliably distinguish talking to other members without verified metadata. Default OFF and end/pause commands."
+}
