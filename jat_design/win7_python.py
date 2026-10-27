@@ -84,7 +84,7 @@ def install_menu():
     print('Khong can pip/PyInstaller. Khong tu tai Python/DLL hay thay doi he thong.')
     print('Dung tat ca bot cu truoc khi chuyen ho so. Khong xoa database de reset gioi han.')
     while True:
-        command = input('1: API Gemini | 2: Nhap ho so | 3: Xuat ho so | 4: Kiem HTTPS | Q: Xong: ').strip().upper()
+        command = input('1: API Gemini | 2: Nhap ho so | 3: Xuat ho so | 4: Kiem HTTPS | 5: Xac minh nhom moi | Q: Xong: ').strip().upper()
         if command == 'Q':
             print('Mo CHECK_WIN7.bat de kiem ho so/kho that truoc START; ENV PASS chua phai READY.')
             return 0
@@ -93,6 +93,9 @@ def install_menu():
             result = setup()
         elif command in ('2', '3'):
             result = profile('--import-profile' if command == '2' else '--export-profile')
+        elif command == '5':
+            from .local_group_profile import main as verify_group
+            result = verify_group()
         elif command == '4':
             from run_portable import check_https
             result = check_https()
@@ -105,7 +108,7 @@ def install_menu():
 def _main(argv=None):
     parser = argparse.ArgumentParser(description='JAT Design: installed Python 3.8.10 x64, not EXE')
     modes = parser.add_mutually_exclusive_group()
-    for option in ('check', 'check-ready', 'self-test', 'install', 'setup', 'import-profile', 'export-profile', 'check-https'):
+    for option in ('check', 'verify-group', 'check-ready', 'self-test', 'install', 'setup', 'import-profile', 'export-profile', 'check-https'):
         modes.add_argument('--'+option, action='store_true')
     args = parser.parse_args(argv)
     for stream in (sys.stdout, sys.stderr):
@@ -132,6 +135,9 @@ def _main(argv=None):
         if not sys.stdin.isatty():
             print('Can CMD tuong tac; khong doc token/key tu input chuyen huong.')
             return 2
+        if args.verify_group:
+            from .local_group_profile import main as verify_group
+            return verify_group()
         if args.install:
             return install_menu()
         if args.setup:

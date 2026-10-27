@@ -22,7 +22,10 @@ def hashed(value):
 
 
 def verified_group(runtime, bot_id):
-    """Use the user's already captured group, never auto-learn another group."""
+    """Use a legacy receipt or explicitly confirmed live receive-only profile."""
+    from .local_group_profile import PROOF, load_profile
+    if (runtime/PROOF).exists():
+        return load_profile(runtime, bot_id)
     path = runtime/'one_shot.db'
     db = sqlite3.connect(path.resolve().as_uri()+'?mode=ro', uri=True)
     try:

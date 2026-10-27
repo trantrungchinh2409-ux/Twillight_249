@@ -1,0 +1,37 @@
+{
+  "base_commit": "19b041e7714b0ccc1cf1f3445ce5b055afeaa108",
+  "branch": "jat-design/win7-local-group-profile-20261027",
+  "offline_tests": {
+    "run": 150,
+    "passed": 146,
+    "skipped": 4,
+    "failures": 0,
+    "errors": 0,
+    "python": "3.12.14",
+    "runner": "Linux-6.18.55-x86_64-with-glibc2.41"
+  },
+  "native_windows_dpapi": "not run; explicit test skipped",
+  "python38_runtime": "not run here; syntax checked",
+  "live_zalo": "not run; no token; real group proof only created on Win7 after live event and confirmation",
+  "live_gemini": "not run",
+  "credential_requests": 0,
+  "zalo_messages_sent": 0,
+  "webhook_mutations": 0,
+  "history_restored": false,
+  "fixture_crypto": "Linux tests only; explicitly a DPAPI double, not native encryption evidence",
+  "production_crypto": "unchanged Windows user-scoped DPAPI; roundtrip checked before save",
+  "unchanged_bot_modules": [
+    "managed_ai",
+    "managed_limits",
+    "key_vault",
+    "gemini_client",
+    "official_api",
+    "polling_test",
+    "state",
+    "reconnect",
+    "webhook_switch",
+    "portable_profile"
+  ],
+  "stable_modified": false,
+  "ci_runs_started": 0
+}

@@ -13,7 +13,7 @@ ERRORS = {
  'PROMPT': (30, 'SYSTEM_PROMPT khong doc duoc hoac khong hop le; giu prompt cu va kiem tra file.'),
  'VAULT_MISSING': (31, 'Chua co khoa Gemini. Mo SETUP_API.bat tren chinh may/tai khoan nay.'),
  'VAULT_READ': (32, 'Khong doc/giai ma duoc kho Gemini: kiem tra tai khoan Windows va quyen file. Khong xoa kho cu.'),
- 'PROFILE_DB_MISSING': (33, 'Thieu one_shot.db. Mo INIT_PROFILE_WIN7.bat de NHAP ho so da xac minh tu may cu.'),
+ 'PROFILE_DB_MISSING': (33, 'Thieu one_shot.db. Mo VERIFY_GROUP_WIN7.bat de xac minh nhom truc tiep, hoac INIT_PROFILE_WIN7.bat de nhap ho so cu.'),
  'PROFILE_DB_READ': (34, 'DB bien nhan hong/bi khoa/khong doc duoc; giu DB va chuyen day du ho so, khong tao DB rong.'),
  'PROFILE_RECEIPT': (35, 'Khong co bien nhan bot da gui thanh cong; nhap dung ho so da xac minh, khong bo qua guard.'),
  'PROFILE_SAMPLE_MISSING': (36, 'Thieu mau nhom da xac minh; nhap ho so bang INIT_PROFILE_WIN7.bat.'),
@@ -65,23 +65,29 @@ def profile(runtime, bot_id=None):
     if (runtime/'profile-import.pending').exists(): raise StartupError('IMPORT_PENDING')
     receipt = runtime/'one_shot.db'
     if not receipt.is_file(): raise StartupError('PROFILE_DB_MISSING')
-    rows = _db(receipt, 'PROFILE_DB_READ', 'SELECT chat_id,status FROM deliveries WHERE event_id=?',
-               ('approved-single-send-20261024',))
-    approved = [r for r in rows if isinstance(r[1], str) and r[1].startswith('api_acknowledged:')]
-    if not approved: raise StartupError('PROFILE_RECEIPT')
-    if bot_id is not None and not any(r[0] == hashed(bot_id) for r in approved):
-        raise StartupError('PROFILE_INVALID')
-    sample = runtime/GROUP_SAMPLE
-    if not sample.is_file(): raise StartupError('PROFILE_SAMPLE_MISSING')
-    try: event = json.loads(protect(sample.read_bytes(), decrypt=True))
-    except Exception: raise StartupError('PROFILE_DECRYPT') from None
-    m = event.get('message', {}) if isinstance(event, dict) else {}
-    chat = m.get('chat', {}) if isinstance(m, dict) else {}
-    if (not isinstance(event, dict) or event.get('event_name') != 'message.text.received'
-            or not isinstance(chat, dict) or chat.get('chat_type') != 'GROUP'
-            or not isinstance(chat.get('id'), str) or not chat['id'].strip()
-            or not isinstance(m.get('text'), str) or TRIGGER not in m['text']):
-        raise StartupError('PROFILE_INVALID')
+    from .local_group_profile import PROOF, load_profile
+    if (runtime/PROOF).exists():
+        try: group_id = load_profile(runtime, bot_id)
+        except Exception: raise StartupError('PROFILE_INVALID') from None
+    else:
+        rows = _db(receipt, 'PROFILE_DB_READ', 'SELECT chat_id,status FROM deliveries WHERE event_id=?',
+                   ('approved-single-send-20261024',))
+        approved = [r for r in rows if isinstance(r[1], str) and r[1].startswith('api_acknowledged:')]
+        if not approved: raise StartupError('PROFILE_RECEIPT')
+        if bot_id is not None and not any(r[0] == hashed(bot_id) for r in approved):
+            raise StartupError('PROFILE_INVALID')
+        sample = runtime/GROUP_SAMPLE
+        if not sample.is_file(): raise StartupError('PROFILE_SAMPLE_MISSING')
+        try: event = json.loads(protect(sample.read_bytes(), decrypt=True))
+        except Exception: raise StartupError('PROFILE_DECRYPT') from None
+        m = event.get('message', {}) if isinstance(event, dict) else {}
+        chat = m.get('chat', {}) if isinstance(m, dict) else {}
+        if (not isinstance(event, dict) or event.get('event_name') != 'message.text.received'
+                or not isinstance(chat, dict) or chat.get('chat_type') != 'GROUP'
+                or not isinstance(chat.get('id'), str) or not chat['id'].strip()
+                or not isinstance(m.get('text'), str) or TRIGGER not in m['text']):
+            raise StartupError('PROFILE_INVALID')
+        group_id = chat['id']
     state = runtime/'ai_reply.db'
     if not state.is_file(): raise StartupError('STATE_MISSING')
     _db(state, 'STATE_READ', 'SELECT chat_id,event_id,status FROM deliveries LIMIT 0')
@@ -90,7 +96,7 @@ def profile(runtime, bot_id=None):
         blocks = _db(state, 'STATE_READ', 'SELECT k FROM auto_block')
         if any(bot_id is None or r[0] == hashed(bot_id) for r in blocks):
             raise StartupError('SEND_UNCERTAIN')
-    return chat['id']
+    return group_id
 
 
 def ready(runtime, prompt, require_vault=True, output=print):
@@ -103,7 +109,7 @@ def ready(runtime, prompt, require_vault=True, output=print):
     except Exception: issues.append('PROMPT')
     try:
         profile(runtime)
-        output('PASS PROFILE/DB: bien nhan, mau nhom DPAPI, DB AI va guard. Bot/token se doi chieu khi khoi dong.')
+        output('PASS PROFILE/DB: ho so xac minh, bang chung DPAPI, DB AI va guard. Bot/token se doi chieu khi khoi dong.')
     except StartupError as error: issues.append(error.category)
     except Exception: issues.append('PROFILE_DB_READ')
     if require_vault:

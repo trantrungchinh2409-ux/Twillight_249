@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     if os.name != 'nt' or sys.version_info[:3] != (3, 8, 10):
         raise SystemExit('Requires native Windows CPython 3.8.10')
-    archive = ROOT/'dist'/'JAT-Design-Win7-Python38-StartupFix-20261026.zip'
+    archive = ROOT/'dist'/'JAT-Design-Win7-Python38-LocalGroup-20261027.zip'
     with tempfile.TemporaryDirectory(prefix='JAT source & ! ') as folder:
         base = Path(folder)
         with zipfile.ZipFile(archive) as z:
@@ -40,7 +40,7 @@ def main():
                 raise RuntimeError('Extracted batch check failed: '+name+' code='+str(result.returncode))
         batch('CHECK_WIN7.bat', 33, b'PROFILE_DB_MISSING')
         batch('SELF_TEST_WIN7.bat', 0, b'PASS SELFTEST')
-        for name in ('SETUP_API.bat', 'INIT_PROFILE_WIN7.bat', 'EXPORT_PROFILE_WIN7.bat'):
+        for name in ('SETUP_API.bat', 'INIT_PROFILE_WIN7.bat', 'EXPORT_PROFILE_WIN7.bat', 'VERIFY_GROUP_WIN7.bat'):
             batch(name, 2, b'Can CMD tuong tac')
         if (source/'runtime').exists():
             raise RuntimeError('Offline/start guard created user runtime unexpectedly')
