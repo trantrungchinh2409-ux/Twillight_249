@@ -26,6 +26,36 @@
   "runtime_in_archive": false,
   "credentials_in_archive": false,
   "stable_modified": false,
-  "ci_runs_started": 0,
-  "full_request_notes": "Sender follow-up is implemented; API must actually deliver non-mention events. Cannot reliably distinguish talking to other members without verified metadata. Default OFF and end/pause commands."
+  "ci_runs_started": 1,
+  "full_request_notes": "Sender follow-up is implemented; API must actually deliver non-mention events. Cannot reliably distinguish talking to other members without verified metadata. Default OFF and end/pause commands.",
+  "native_python3810": {
+    "python": "3.8.10",
+    "platform": "Windows-10-10.0.20348-SP0",
+    "network_blocked": true,
+    "live_zalo": "not run",
+    "live_gemini": "not run",
+    "typing_live_verified": false,
+    "win7_live_verified": false,
+    "status": "PASS",
+    "tests": 252,
+    "passed": 251,
+    "failures": [],
+    "errors": [],
+    "skipped": [
+      {
+        "test": "test_digicert_bundle.DigiCertBundleTests.test_official_bundle_real_pins_native_signatures_and_dates",
+        "reason": "Official bundle/native Windows build required"
+      }
+    ]
+  },
+  "native_test_job": "https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40447607982/job/122002496979",
+  "ci_retry_count": 0,
+  "full_suite_linux": {
+    "run": 252,
+    "passed": 200,
+    "skipped": 6,
+    "errors_native_windows_dpapi": 45,
+    "failure_windows_mutex_flow": 1,
+    "status": "not target platform"
+  }
 }

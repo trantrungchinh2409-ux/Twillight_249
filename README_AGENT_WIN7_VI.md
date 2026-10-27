@@ -49,7 +49,7 @@ Với mỗi thành viên:
 5. Tên đã thuộc tài khoản khác sẽ bị từ chối. Muốn thay liên kết, dùng `X` và `GO TEN` để gỡ đúng tên rồi xác minh lại; không âm thầm chuyển tên sang ID khác.
 6. Chọn3 cho bot: dùng bot ID thật từ getMe, không chờ một thành viên giả làm bot.
 
-Có chọn0 để nhập tên khác tối đa64 ký tự. Tên chưa được gán sẽ gọi chung “bạn”, không tự suy tên hiển thị. Định danh và tên lưu DPAPI trong `runtime/agent_state.db`, tồn tại qua restart. Gán tên là công cụ chỉ đọc API: không gửi tin hoặc đổi webhook.
+Các tên này là cách gọi trong phản hồi/bộ nhớ; không đổi tên hiển thị của tài khoản Zalo. Có chọn0 để nhập tên khác tối đa64 ký tự. Tên chưa được gán sẽ gọi chung “bạn”, không tự suy tên hiển thị. Định danh và tên lưu DPAPI trong `runtime/agent_state.db`, tồn tại qua restart. Gán tên là công cụ chỉ đọc API: không gửi tin hoặc đổi webhook.
 
 ## 3. Chạy Agent và mở phiên
 
@@ -148,3 +148,12 @@ Không chạy bản cũ và Agent đồng thời. Cùng mutex vault/token sẽ c
 6. OFF khi đang chờ để kiểm hủy. Không cố tạo timeout gửi thật hoặc spam quota; các ca đó đã test offline.
 
 **Đã test offline; chưa nghiệm thu Agent live trên Win7/Zalo.** Chi tiết kết quả và phần cần xác minh trong VALIDATION_AGENT_WIN7.md. Không đưa API key/token/runtime lên GitHub/chat.
+
+
+## Kết quả bàn giao cuối
+
+- **PASS toàn suite trên Windows Server2022, CPython3.8.10 x64: 252 bài,251 PASS,1 SKIP,0 lỗi.** Test skip là kiểm bộ root+intermediate riêng; root G3 đang dùng và context Zalo vẫn được các test khác kiểm.
+- Runner chặn socket, không có key/token ứng dụng, không gửi Zalo/Gemini/typing thật. Một lượt native, không retry. Chi tiết AGENT_NATIVE_TEST_REPORT.json.
+- SELF_TEST_AGENT_WIN7.bat tại máy bạn chạy34 bài Agent và preflight native; toàn suite base+Agent đã được chạy riêng ở cloud như trên.
+- ZIP chỉ bổ sung file mới, không chứa runtime/DB/vault và không ghi đè file bot cũ. Baseline36 file được so hash và giữ nguyên.
+- Windows7 thật, gán tên đúng người, việc getUpdates giao tin không @ và typing hiển thị trên Zalo vẫn chờ nghiệm thu tại máy công ty. Không dùng PASS unit test để tuyên bố các chức năng live đó đã đạt.

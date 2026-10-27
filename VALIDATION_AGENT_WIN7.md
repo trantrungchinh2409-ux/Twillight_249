@@ -62,3 +62,16 @@ Chỉ yêu cầu tester thử từng bước sau offline PASS như README; khôn
 Đã chạy toàn suite tại Linux/Python3.12.14:252 test,200 PASS,6 SKIP,45 errors do Windows DPAPI không có và1 failure ở luồng mutex Windows. Đây là kết quả môi trường, không được ghi thành toàn suite PASS. Nguồn Python3.8.10 từ python.org không tải được trong container (URLError), không tắt HTTPS để tải.
 
 Theo ưu tiên kiểm tra toàn bộ test trên Python3.8.10, chuẩn bị **một lượt Windows runner x64** với socket bị chặn, không cấp key/token ứng dụng và không gọi API live. Kết quả sẽ nằm tại AGENT_NATIVE_TEST_REPORT.json; chỉ công bố PASS khi báo cáo thực có PASS. Workflow không fetch CA, không deploy và không tự retry; chỉ chạy khi chính file workflow thay đổi. Các commit tài liệu/ZIP sau đó dùng skip ci.
+
+
+## Kết quả native thực tế — PASS
+
+Một lượt đã hoàn thành tại https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40447607982/job/122002496979 . Báo cáo tự ghi tại AGENT_NATIVE_TEST_REPORT.json:
+
+- Windows Server2022 build20348, **CPython3.8.10 x64**.
+- **252 test chạy,251 PASS,1 SKIP,0 failures,0 errors**.
+- Test skip: test_official_bundle_real_pins_native_signatures_and_dates, cần full root+intermediate môi trường riêng. Test root G3 thực tế và context chỉ dùng root vẫn PASS.
+- Native DPAPI của Agent và các test base/vault/startup/mutex đã chạy trên Windows. Socket bị chặn toàn suite. Không có app key/token, không gọi Zalo/Gemini/typing live.
+- Chạy một lần, không retry workflow. Commit report/final ZIP dùng skip ci và không đổi workflow để chạy lại.
+
+Kết quả này thay trạng thái “native pending” ở mục trên; không thay đổi các giới hạn live Win7/Zalo đã ghi. Đây là kiểm interpreter3.8.10/native Windows, chưa phải chạy Agent thật trên Windows7 ở công ty. Không có sửa code runtime sau lượt native PASS; chỉ cập nhật tài liệu/báo cáo/allowlist đóng gói.

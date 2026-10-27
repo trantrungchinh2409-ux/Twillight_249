@@ -5,7 +5,7 @@ import json
 import zipfile
 ROOT=Path(__file__).resolve().parents[1]
 NAME='JAT-Design-Agent-Win7-Python38-Addon-20261027.zip'
-FILES=('run_agent_win7.py','START_AGENT_WIN7.bat','SETUP_AGENT_NAMES_WIN7.bat','CHECK_AGENT_WIN7.bat',
+FILES=('AGENT_NATIVE_TEST_REPORT.json','run_agent_win7.py','START_AGENT_WIN7.bat','SETUP_AGENT_NAMES_WIN7.bat','CHECK_AGENT_WIN7.bat',
        'SELF_TEST_AGENT_WIN7.bat','ROLLBACK_WIN7.bat','AGENT_BASELINE.json','README_AGENT_WIN7_VI.md',
        'VALIDATION_AGENT_WIN7.md','AGENT_VERIFICATION.json','scripts/package_agent_win7.py','tests/test_agent_win7.py',
        'jat_design/agent_app.py','jat_design/agent_store.py','jat_design/agent_engine.py',
