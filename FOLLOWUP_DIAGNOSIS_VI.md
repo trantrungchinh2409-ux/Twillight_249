@@ -39,12 +39,12 @@ Chạy CHECK_AGENT_WIN7.bat và SELF_TEST_AGENT_WIN7.bat. Có thể chạy bản
 3. PhaA: Enter để READY A. **Cùng tài khoản dùng để thử FOLLOWUP**, gửi @bot kèm đúng mã A mới hiện trong đúng nhóm đã duyệt. Phải có RAW_MATCH_RECEIVED mới sang B; sender A chỉ giữ trong RAM để so sánh, không ghi ID hoặc hash.
 4. PhaB: Enter để READY B. Cùng tài khoản A, gửi **mã B như tin thường**, không @, không Reply. Mỗi pha khoảng65–105 giây do long-poll. Nếu không có event, chờ kết quả, không gửi hàng loạt.
 5. PhaC: Enter để READY C. Cùng tài khoản A, dùng chức năng Reply/Quote của Zalo vào **một tin thật mà bot đã gửi trước đó**, nội dung là mã C, không @. Probe không gửi tin mới để tạo đích Reply.
-6. Chỉ gửi sau READY của đúng pha. Mã mỗi pha khác nhau để event B đến chậm không bị nhầm thành C. Có thể Q giữa các pha hoặc Ctrl+C.
+6. Chỉ gửi sau READY của đúng pha. Một tin @ để đối chứng đường nhận, sau đó chỉ1 tin thường và1 tin Reply; không gửi hàng loạt. Mã mỗi pha khác nhau để event B đến chậm không bị nhầm thành C. Có thể Q giữa các pha hoặc Ctrl+C.
 7. Lấy **riêng runtime/agent_followup_probe.json** hoặc ảnh PROBE_META/PROBE_PHASE. Không gửi cả runtime, token, ID hoặc nội dung hội thoại.
 
 Probe chỉ ghi số poll rỗng/nonempty, enum đã biết, shape/boolean, shared_valid_event và dry-run prefilter. Không text, tên người, sender/group/message ID, ID hash, timestamp thô, token hay mã phiên đầy đủ. UNKNOWN enum không được echo giá trị. Tối đa8 metadata gần nhất/pha, tối đa40 nonempty/pha; báo cáo ghi đè đúng file riêng. Không sửa one_shot.db, agent_state.db, ai_reply.db hoặc vault.
 
-Label A/B/C là nhãn do người thử thực hiện, không chứng minh Reply entity. `dry_worker_would_queue` chỉ mô phỏng BOT/AGENT/FOLLOWUP ON với phiên còn hạn đọc từ SQLite readonly ở thời điểm probe; không chạy worker hoặc gọi sendMessage. Probe không gia hạn phiên nên session có thể đã hết hạn sau khi Agent đóng — dry queue=false trong trường hợp đó không chứng minh lỗi ở phiên thử trước.
+Label A/B/C là nhãn do người thử thực hiện, không chứng minh Reply entity. `known_reply_key_present`/`reply_key_shapes` chỉ ghi có hay không và kiểu dữ liệu của4 key quan sát cố định (reply_to_message/reply_to/quote/quoted_message); không đọc/lưu giá trị hoặc xác nhận target. Có key không đồng nghĩa đã xác minh Reply-to-bot; không thấy các key này cũng không chứng minh mọi schema Zalo không có Reply metadata. `dry_worker_would_queue` chỉ mô phỏng BOT/AGENT/FOLLOWUP ON với phiên còn hạn đọc từ SQLite readonly ở thời điểm probe; không chạy worker hoặc gọi sendMessage. Probe không gia hạn phiên nên session có thể đã hết hạn sau khi Agent đóng — dry queue=false trong trường hợp đó không chứng minh lỗi ở phiên thử trước.
 
 Exit0 nghĩa đã thu xong báo cáo, **không phải FOLLOWUP PASS**. API lỗi được ghi kind/code an toàn; không tự đổi webhook/token hoặc retry gửi.
 
@@ -56,6 +56,7 @@ Exit0 nghĩa đã thu xong báo cáo, **không phải FOLLOWUP PASS**. API lỗi
 | C RAW_MATCH_RECEIVED | API đã giao result khớp mã Reply do người dùng thử; xem các gate tiếp theo, không đổ lỗi API không giao |
 | nonempty>0 nhưng shared_valid_event=false | Có result trước helper, nhưng hợp đồng/schema hiện tại bị helper từ chối. Chưa sửa parser khi chưa xác định field/kiểu cần sửa |
 | shared_valid_event=true, worker_prefilter_pass=false | Event bị điều kiện nhóm/sender/non-bot/text của Worker loại. Xem flags; không đoán ID hoặc bỏ guard |
+| known_reply_key_present=true | Result có ít nhất1 key Reply/Quote trong4 key quan sát; chỉ ghi type, không suy Reply target hoặc bật parser |
 | trigger_in_text=true ở pha B/C | Payload được rule hiện tại coi là có chuỗi kích hoạt; observed.plain có thể vẫn0. Không suy ngược từ UI thao tác sang text API |
 | worker_prefilter_pass=true nhưng dry queue=false | Có thể không còn session theo ID, hoặc gate queue; probe không tạo/gia hạn session |
 | shared/worker gates đều đạt, event mới sau lệnh đổi mode | Bản cũ có lỗi snapshot đã tái hiện; bản vá dispatch xử lý sự kiện mới. Cần thử lại thực tế để xác nhận |

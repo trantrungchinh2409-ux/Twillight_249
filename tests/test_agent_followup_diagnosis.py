@@ -92,6 +92,15 @@ class ProbeMetadataTests(unittest.TestCase):
                          clock=clock.monotonic,wait=clock.sleep,seconds=2)
         self.assertEqual(received['status'],'RAW_MATCH_RECEIVED')
         self.assertFalse(received['events'][0]['shared_valid_event'])
+    def test_reply_field_presence_is_only_metadata_not_verified_reply_or_private_content(self):
+        import json
+        from jat_design.agent_followup_probe import metadata
+        e=self.event(reply_to_message={'from':{'id':'SECRET-SENDER'},'text':'SECRET-QUOTED-TEXT'},quote='SECRET-MESSAGE-ID')
+        r=metadata(e,'bot','private-group',None,set(),1700000001)
+        self.assertTrue(r['known_reply_key_present'])
+        self.assertEqual(r['reply_key_shapes'],{'reply_to_message':'OBJECT','quote':'STRING'})
+        self.assertFalse(r['reply_verified'])
+        self.assertNotIn('SECRET-',json.dumps(r))
     def test_existing_agent_sessions_read_only_and_only_return_internal_keys(self):
         import sqlite3,tempfile
         from pathlib import Path
@@ -100,9 +109,12 @@ class ProbeMetadataTests(unittest.TestCase):
         from jat_design.agent_store import key
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);p=root/'agent_state.db'
-            with sqlite3.connect(p) as db:
-                db.execute('CREATE TABLE agent_sessions(k TEXT,g TEXT,expires REAL)')
-                db.execute('INSERT INTO agent_sessions VALUES (?,?,?)',(key('b','g','u'),key('b','g'),2000))
+            db=sqlite3.connect(p)
+            try:
+                with db:
+                    db.execute('CREATE TABLE agent_sessions(k TEXT,g TEXT,expires REAL)')
+                    db.execute('INSERT INTO agent_sessions VALUES (?,?,?)',(key('b','g','u'),key('b','g'),2000))
+            finally:db.close()  # sqlite context commits, it does not close; Windows locks cleanup.
             before=p.read_bytes()
             with patch('time.time',return_value=1000):r=active_keys_readonly(root,'b','g')
             self.assertEqual(r,{key('b','g','u')});self.assertEqual(p.read_bytes(),before)

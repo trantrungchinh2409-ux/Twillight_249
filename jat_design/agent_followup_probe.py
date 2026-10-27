@@ -15,6 +15,16 @@ from .startup_check import profile
 from .webhook_switch import hidden
 
 
+def value_kind(value):
+    if value is None:return 'NULL'
+    if isinstance(value,bool):return 'BOOL'
+    if isinstance(value,dict):return 'OBJECT'
+    if isinstance(value,list):return 'LIST'
+    if isinstance(value,str):return 'STRING'
+    if type(value) in (int,float):return 'NUMBER'
+    return 'OTHER'
+
+
 def metadata(result,bot,group,anchor,active_keys,now,phase_started=None):
     obj=result if isinstance(result,dict) else {}
     m=obj.get('message');m=m if isinstance(m,dict) else {}
@@ -25,6 +35,7 @@ def metadata(result,bot,group,anchor,active_keys,now,phase_started=None):
     try:finite=numeric and math.isfinite(stamp)
     except OverflowError:finite=False
     helper=valid_event(result)
+    reply_shapes={name:value_kind(m[name]) for name in ('reply_to_message','reply_to','quote','quoted_message') if name in m}
     # Dry-run exact current Worker prefilter, never start a thread/API or persist data.
     worker=AgentWorker(Path('.'),bot,group,'','',None,output=lambda _:None)
     worker.active_members=active_keys
@@ -48,7 +59,7 @@ def metadata(result,bot,group,anchor,active_keys,now,phase_started=None):
             'date_range_hint':'MILLISECONDS_LIKE' if finite and 1e12<=stamp<1e14 else 'SECONDS_LIKE' if finite and 1e9<=stamp<1e11 else 'OTHER',
             'shared_valid_event':helper,'worker_prefilter_pass':worker.observed['received']>0,
             'dry_worker_would_queue':queued,'dry_worker_exception':error,
-            'dry_config':'BOT_AGENT_FOLLOWUP_ON','reply_verified':False}
+            'dry_config':'BOT_AGENT_FOLLOWUP_ON','known_reply_key_present':bool(reply_shapes),'reply_key_shapes':reply_shapes,'reply_verified':False}
 
 
 def active_keys_readonly(runtime,bot,group):

@@ -44,3 +44,4 @@ jobs:
           git commit -m 'Record native offline Python3.8.10 Agent test result [skip ci]'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           git push origin HEAD:refs/heads/jat-design/agent-followup-diagnosis-20261027
+# Fixture fix: close SQLite connection before TemporaryDirectory cleanup on Windows.
