@@ -1,3 +1,5 @@
+> Bản FOLLOWUP diagnosis mới: đọc FOLLOWUP_DIAGNOSIS_VI.md trước. Có sửa lỗi dispatch snapshot đã tái hiện và PROBE_FOLLOWUP_WIN7.bat chỉ đọc metadata trước bộ lọc. Toàn suite265/264 PASS/1 SKIP trên Windows/Python3.8.10. Kết quả B/C live vẫn chờ báo cáo; không đổi các giới hạn API bên dưới.
+
 # JAT Design Agent — gói bổ sung Win7/Python3.8.10
 
 Bản phát triển riêng, kế thừa mốc Win7 đã chạy tốt `53f5976`/tag `jat-design-win7-accepted-20261027`, báo cáo lưu mốc `8dcb83e`. Không sửa bất kỳ file bot cũ nào. Không build EXE, không đổi webhook, không Railway. Gói ZIP là **add-on**, cần chép vào đúng thư mục bản Win7 đang hoạt động; không phải bot mới từ đầu.

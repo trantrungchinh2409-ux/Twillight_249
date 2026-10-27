@@ -1,9 +1,9 @@
 {
-  "branch": "jat-design/agent-win7-20261027",
+  "branch": "jat-design/agent-followup-diagnosis-20261027",
   "accepted_base_commit": "8dcb83e6fc5b4112e7c194983916d59346ad8bba",
   "offline_tests": {
-    "run": 184,
-    "passed": 179,
+    "run": 197,
+    "passed": 192,
     "skipped": 5,
     "failures": 0,
     "errors": 0,
@@ -26,7 +26,7 @@
   "runtime_in_archive": false,
   "credentials_in_archive": false,
   "stable_modified": false,
-  "ci_runs_started": 1,
+  "ci_runs_started": 3,
   "full_request_notes": "Sender follow-up is implemented; API must actually deliver non-mention events. Cannot reliably distinguish talking to other members without verified metadata. Default OFF and end/pause commands.",
   "native_python3810": {
     "python": "3.8.10",
@@ -37,8 +37,8 @@
     "typing_live_verified": false,
     "win7_live_verified": false,
     "status": "PASS",
-    "tests": 252,
-    "passed": 251,
+    "tests": 265,
+    "passed": 264,
     "failures": [],
     "errors": [],
     "skipped": [
@@ -48,7 +48,7 @@
       }
     ]
   },
-  "native_test_job": "https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40447607982/job/122002496979",
+  "native_test_job": "https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40453021982",
   "ci_retry_count": 0,
   "full_suite_linux": {
     "run": 252,
@@ -57,5 +57,22 @@
     "errors_native_windows_dpapi": 45,
     "failure_windows_mutex_flow": 1,
     "status": "not target platform"
-  }
+  },
+  "diagnostic_native_runs": 2,
+  "diagnostic_native_retry_reason": "SQLite test fixture did not close its connection before Windows temporary directory cleanup; closed fixture connection, production read-only function already closes",
+  "diagnostic_tests": 13,
+  "user_reported_previous_agent": {
+    "win7_runs": true,
+    "names": true,
+    "gemini": true,
+    "typing_api": true,
+    "ordinary_plain_followup": false,
+    "reply_followup": false,
+    "observed_received": 4,
+    "observed_plain": 0
+  },
+  "snapshot_bug_reproduced_offline": true,
+  "live_snapshot_causality": "not established as sole cause",
+  "reply_wire_metadata_verified": false,
+  "current_probe_live_result": "not collected"
 }

@@ -4,7 +4,7 @@
 
 Người dùng báo Win7 Agent đã hoạt động: @bot có trả lời, tên AI JAT/Gemini/typing API hoạt động; FOLLOWUP bật thành công. STATUS có bot/agent/catchall=true, sessions=2, observed.received=4, plain=0, plain_active_member=0. Đây là dữ liệu người dùng cung cấp, không phải kết quả live tại môi trường phát triển.
 
-**Chưa thể kết luận chỉ từ observed.plain=0 rằng Zalo không giao tin.** Bộ đếm nằm sau Transport, shared valid_event, kiểm snapshot mode và worker prefilter. Dữ liệu không khớp schema, nhóm/sender/is_bot/text hoặc bị hủy do mode đổi có thể chưa từng tăng bộ đếm. Plain còn có nghĩa kỹ thuật là text KHÔNG chứa đúng chuỗi @Bot JAT Design, không phải đã xác minh người dùng không thao tác @/Reply trên UI.
+**Chưa thể kết luận chỉ từ observed.plain=0 rằng Zalo không giao tin.** `reply_verified=false` không tự chặn FOLLOWUP theo sender khi catchall=true; không đổi cờ này để ép PASS. Bộ đếm nằm sau Transport, shared valid_event, kiểm snapshot mode và worker prefilter. Dữ liệu không khớp schema, nhóm/sender/is_bot/text hoặc bị hủy do mode đổi có thể chưa từng tăng bộ đếm. Plain còn có nghĩa kỹ thuật là text KHÔNG chứa đúng chuỗi @Bot JAT Design, không phải đã xác minh người dùng không thao tác @/Reply trên UI.
 
 ### Tài liệu chính thức đọc lại HTTP200
 
@@ -44,7 +44,7 @@ Chạy CHECK_AGENT_WIN7.bat và SELF_TEST_AGENT_WIN7.bat. Có thể chạy bản
 
 Probe chỉ ghi số poll rỗng/nonempty, enum đã biết, shape/boolean, shared_valid_event và dry-run prefilter. Không text, tên người, sender/group/message ID, ID hash, timestamp thô, token hay mã phiên đầy đủ. UNKNOWN enum không được echo giá trị. Tối đa8 metadata gần nhất/pha, tối đa40 nonempty/pha; báo cáo ghi đè đúng file riêng. Không sửa one_shot.db, agent_state.db, ai_reply.db hoặc vault.
 
-Label A/B/C là nhãn do người thử thực hiện, không chứng minh Reply entity. `known_reply_key_present`/`reply_key_shapes` chỉ ghi có hay không và kiểu dữ liệu của4 key quan sát cố định (reply_to_message/reply_to/quote/quoted_message); không đọc/lưu giá trị hoặc xác nhận target. Có key không đồng nghĩa đã xác minh Reply-to-bot; không thấy các key này cũng không chứng minh mọi schema Zalo không có Reply metadata. `dry_worker_would_queue` chỉ mô phỏng BOT/AGENT/FOLLOWUP ON với phiên còn hạn đọc từ SQLite readonly ở thời điểm probe; không chạy worker hoặc gọi sendMessage. Probe không gia hạn phiên nên session có thể đã hết hạn sau khi Agent đóng — dry queue=false trong trường hợp đó không chứng minh lỗi ở phiên thử trước.
+Label A/B/C là nhãn do người thử thực hiện, không chứng minh Reply entity. `known_reply_key_present`/`reply_key_shapes` chỉ ghi có hay không và kiểu dữ liệu của4 key quan sát cố định (reply_to_message/reply_to/quote/quoted_message); không đọc/lưu giá trị hoặc xác nhận target. Có key không đồng nghĩa đã xác minh Reply-to-bot; không thấy các key này cũng không chứng minh mọi schema Zalo không có Reply metadata. `dry_worker_would_queue` chỉ mô phỏng BOT/AGENT/FOLLOWUP ON với snapshot phiên còn hạn đọc từ SQLite readonly khi mở probe; không chạy worker hoặc gọi sendMessage. Probe không gia hạn phiên nên session có thể đã hết hạn sau khi Agent đóng — dry queue=false trong trường hợp đó không chứng minh lỗi ở phiên thử trước.
 
 Exit0 nghĩa đã thu xong báo cáo, **không phải FOLLOWUP PASS**. API lỗi được ghi kind/code an toàn; không tự đổi webhook/token hoặc retry gửi.
 
@@ -68,3 +68,12 @@ Nếu C không được giao dù A được giao và đúng thao tác Reply, hi�
 ## Trạng thái nghiệm thu
 
 Bản vá logic snapshot và probe đã được test offline bằng event giả; không dùng mock để tuyên bố FOLLOWUP live thành công. Kết quả kiểm thử cụ thể ở AGENT_NATIVE_TEST_REPORT.json/VALIDATION_AGENT_WIN7.md. Không gửi tin thật hoặc dùng key/token của người dùng tại môi trường phát triển.
+
+
+## Kiểm thử bản bàn giao
+
+- Toàn suite trên Windows Server2022, **CPython3.8.10 x64:265 test,264 PASS,1 SKIP,0 lỗi**, socket bị chặn, không có key/token ứng dụng.
+- Skip là test full CA root+intermediate môi trường riêng; TLS G3 runtime không đổi và đã có test riêng.
+- Trước/sau lỗi snapshot, OFF/ON không hồi sinh event cũ, raw empty vs helper/worker reject, Reply key chỉ ghi type, không ghi private data, SQLite đọc readonly và không start worker/gửi trong probe đều có test.
+- Một fixture SQLite của test mới giữ connection khi dọn thư mục tạm trên Windows; đã đóng đúng connection và native suite chạy lại PASS. Hàm readonly production vốn đã đóng DB trong finally, không sửa DB logic để né lỗi test.
+- Người dùng đã xác nhận Agent trước bản này chạy Win7/tên/Gemini/typing API; **probe và bản vá mới chưa có kết quả Zalo thật**. Không dùng test để khẳng định API đã giao B/C hoặc Reply metadata đã được xác minh.

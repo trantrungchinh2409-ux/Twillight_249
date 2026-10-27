@@ -84,3 +84,10 @@ Người dùng đã xác nhận Agent chạy Win7, tên AI JAT/Gemini/typing API
 Source xác nhận lỗi snapshot khi đổi mode trong long-poll; test tái hiện code cũ loại event mới. Chỉ vá dispatch lấy snapshot mới với timestamp sau armed; job cũ vẫn bị hủy, OFF/ON không hồi sinh event cũ. Thêm probe A/B/C chỉ đọc result trước valid_event và dry-run Worker, giữ mọi ID/text/token/nonce trong RAM; file chỉ metadata booleans/enum và counts, không ghi ID hash.
 
 Các trường hợp probe test được: result nonempty nhưng schema bị từ chối, thiếu is_bot làm Worker bỏ trước observed, text chứa trigger khiến plain vẫn0, API empty thật, map cùng sender bằng RAM và group đã duyệt, readonly SQLite, không start worker/không gửi, không lộ private enum/ID/text. Thử nghiệp mới chưa chạy bằng token thật tại môi trường phát triển; xem FOLLOWUP_DIAGNOSIS_VI.md. Native test report mới sẽ ghi toàn suite của bản chẩn đoán, không lấy PASS252 của bản trước làm PASS cho bản này.
+
+
+### Kết quả native cuối của bản FOLLOWUP diagnosis
+
+Run https://github.com/trantrungchinh2409-ux/Twillight_249/actions/runs/40453021982 : Windows/Python3.8.10 x64,265 test,264 PASS,1 SKIP,0 failures/errors. Bộ socket bị chặn và không cấp app credentials. Bản đầu chạy264 test có1 error ở fixture readonly DB; context manager sqlite chỉ commit mà không close, giữ file trên Windows khi TemporaryDirectory cleanup. Sửa fixture close, không sửa hàm readonly vốn đã finally.close; thêm test metadata Reply chỉ ghi type, chạy lại native PASS.
+
+Bản vá ứng dụng chỉ thay dispatch snapshot của Agent; helper/parser/coreWin7/mutex/dedupe/offset/budget đều giữ nguyên. Probe không gửi/typing/Gemini, không đọc Gemini vault, không tạo state/profile, không thay webhook/token. Field Reply quan sát chỉ cho biết presence/type, không chứng nhận target. Chưa lấy report probe live của người dùng, snapshot chưa được kết luận là nguyên nhân duy nhất.
