@@ -6,13 +6,11 @@
   "live_gemini": "not run",
   "typing_live_verified": false,
   "win7_live_verified": false,
-  "status": "FAIL",
-  "tests": 264,
-  "passed": 262,
+  "status": "PASS",
+  "tests": 265,
+  "passed": 264,
   "failures": [],
-  "errors": [
-    "test_agent_followup_diagnosis.ProbeMetadataTests.test_existing_agent_sessions_read_only_and_only_return_internal_keys"
-  ],
+  "errors": [],
   "skipped": [
     {
       "test": "test_digicert_bundle.DigiCertBundleTests.test_official_bundle_real_pins_native_signatures_and_dates",
